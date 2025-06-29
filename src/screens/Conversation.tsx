@@ -33,7 +33,8 @@ export const Conversation: React.FC = () => {
   const token = useAtomValue(apiTokenAtom);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [connectionAttempts, setConnectionAttempts] = useState(0);
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+  const [isJoiningCall, setIsJoiningCall] = useState(false);
 
   const daily = useDaily();
   const localSessionId = useLocalSessionId();
@@ -52,7 +53,9 @@ export const Conversation: React.FC = () => {
         return;
       }
       
-      if (conversation) return;
+      if (conversation || isCreatingConversation) return;
+      
+      setIsCreatingConversation(true);
       
       try {
         console.log("Creating conversation with token:", token);
@@ -64,19 +67,22 @@ export const Conversation: React.FC = () => {
         console.error("Failed to create conversation:", error);
         setError(`Failed to create conversation: ${error instanceof Error ? error.message : 'Unknown error'}`);
         setIsLoading(false);
+      } finally {
+        setIsCreatingConversation(false);
       }
     };
 
     initConversation();
-  }, [token, conversation, setConversation]);
+  }, [token, conversation, setConversation, isCreatingConversation]);
 
   useEffect(() => {
-    if (!conversation?.conversation_url || !daily) return;
+    if (!conversation?.conversation_url || !daily || isJoiningCall) return;
 
     const joinCall = async () => {
+      setIsJoiningCall(true);
+      
       try {
         console.log("Joining call with URL:", conversation.conversation_url);
-        setConnectionAttempts(prev => prev + 1);
         
         await daily.join({
           url: conversation.conversation_url,
@@ -92,22 +98,14 @@ export const Conversation: React.FC = () => {
       } catch (error) {
         console.error("Failed to join call:", error);
         setError(`Failed to join call: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        
-        // Retry logic
-        if (connectionAttempts < 3) {
-          console.log(`Retrying connection (attempt ${connectionAttempts + 1}/3)`);
-          setTimeout(() => {
-            setIsLoading(true);
-            setError(null);
-          }, 2000);
-        } else {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
+      } finally {
+        setIsJoiningCall(false);
       }
     };
 
     joinCall();
-  }, [conversation?.conversation_url, daily, connectionAttempts]);
+  }, [conversation?.conversation_url, daily, isJoiningCall]);
 
   useEffect(() => {
     if (remoteParticipantIds.length && !localAudio.isOff) return;
@@ -139,8 +137,9 @@ export const Conversation: React.FC = () => {
   const retryConnection = useCallback(() => {
     setIsLoading(true);
     setError(null);
-    setConnectionAttempts(0);
     setConversation(null);
+    setIsCreatingConversation(false);
+    setIsJoiningCall(false);
   }, [setConversation]);
 
   if (error) {
@@ -178,7 +177,9 @@ export const Conversation: React.FC = () => {
             color="white"
           ></l-quantum>
           <p className="text-white mt-4">
-            {connectionAttempts > 0 ? `Connecting... (attempt ${connectionAttempts}/3)` : 'Setting up your conversation...'}
+            {isCreatingConversation ? 'Creating conversation...' : 
+             isJoiningCall ? 'Joining call...' : 
+             'Setting up your conversation...'}
           </p>
         </div>
       </div>
