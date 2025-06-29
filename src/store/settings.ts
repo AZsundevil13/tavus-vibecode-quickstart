@@ -21,11 +21,11 @@ const getInitialSettings = (): Settings => {
     interruptSensitivity: "medium",
     greeting: "",
     context: "",
-    persona: "",
-    replica: "",
+    persona: "pd43ffef",
+    replica: "r91c80eca351", // Set the replica ID from your conversation
   };
 };
 
 export const settingsAtom = atom<Settings>(getInitialSettings());
 
-export const settingsSavedAtom = atom<boolean>(false); 
+export const settingsSavedAtom = atom<boolean>(false);

@@ -26,6 +26,7 @@ export const createConversation = async (
   
   const payload = {
     persona_id: settings.persona || "pd43ffef",
+    replica_id: settings.replica || "r91c80eca351", // Using the replica ID from your conversation
     custom_greeting: settings.greeting !== undefined && settings.greeting !== null 
       ? settings.greeting 
       : "Hey there! I'm so glad you're here! I'm your AI best friend, and I'm always excited to chat with you. What's going on in your world today?",
