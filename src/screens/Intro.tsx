@@ -1,12 +1,7 @@
-import { AnimatedWrapper } from "@/components/DialogWrapper";
 import React from "react";
 import { useAtom } from "jotai";
 import { screenAtom } from "@/store/screens";
-import { Users } from "lucide-react";
-import AudioButton from "@/components/AudioButton";
 import { apiTokenAtom } from "@/store/tokens";
-import { Input } from "@/components/ui/input";
-import gloriaVideo from "@/assets/video/gloria.mp4";
 
 export const Intro: React.FC = () => {
   const [, setScreenState] = useAtom(screenAtom);
@@ -21,92 +16,20 @@ export const Intro: React.FC = () => {
     }
   }, [token, setToken]);
 
-  const handleClientManagement = () => {
-    setScreenState({ currentScreen: "clientManagement" });
+  const handleStartChat = () => {
+    setScreenState({ currentScreen: "conversation" });
   };
 
   return (
-    <AnimatedWrapper>
-      <div className="flex size-full flex-col items-center justify-center">
-        <video
-          src={gloriaVideo}
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        <div className="absolute inset-0 bg-primary-overlay backdrop-blur-sm" />
-        <div className="relative z-10 flex flex-col items-center gap-4 py-6 px-6 rounded-xl border border-[rgba(255,255,255,0.2)]" 
-          style={{ 
-            fontFamily: 'Inter, sans-serif',
-            background: 'rgba(0,0,0,0.3)'
-          }}>
-          
-          <h1 className="text-2xl font-bold text-white mb-2 text-center" style={{ fontFamily: 'Source Code Pro, monospace' }}>
-            Runsphere BCBA-D Platform
-          </h1>
-          
-          <p className="text-sm text-gray-300 text-center max-w-md mb-4">
-            Professional therapy platform for BCBA-D students and K-12 SPED teachers. 
-            Manage clients, track sessions, and conduct AI-assisted therapy sessions.
-          </p>
-
-          <div className="flex flex-col gap-3 items-center mt-2">
-            <Input
-              type="password"
-              value={token || ""}
-              onChange={(e) => {
-                const newToken = e.target.value;
-                setToken(newToken);
-                localStorage.setItem('tavus-token', newToken);
-              }}
-              placeholder="Enter Tavus API Key"
-              className="w-64 bg-[rgba(255,255,255,0.1)] text-white rounded-3xl border border-[rgba(255,255,255,0.3)] px-4 py-3 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary"
-              style={{ 
-                color: 'white', 
-                fontFamily: 'Source Code Pro, monospace',
-              }}
-            />
-
-            <p className="text-sm text-white transition-all duration-200">
-              Don't have a key?{" "}
-              <a
-                href="https://platform.tavus.io/api-keys"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline hover:text-primary"
-              >
-                Create an account.
-              </a>
-            </p>
-          </div>
-
-          <AudioButton 
-            onClick={handleClientManagement}
-            className="relative z-20 flex items-center justify-center gap-2 rounded-3xl border border-[rgba(255,255,255,0.3)] px-6 py-3 text-sm text-white transition-all duration-200 hover:text-primary mt-4 disabled:opacity-50"
-            disabled={!token}
-            style={{
-              height: '48px',
-              transition: 'all 0.2s ease-in-out',
-              backgroundColor: 'rgba(0,0,0,0.3)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 0 15px rgba(34, 197, 254, 0.5)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            <Users className="size-4" />
-            Access Platform
-          </AudioButton>
-          
-          <div className="text-xs text-gray-400 text-center mt-2">
-            BCBA-D Student Platform • Licensed K-12 SPED Teacher
-          </div>
-        </div>
+    <div className="flex items-center justify-center min-h-screen bg-black">
+      <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-12 border border-white/20">
+        <button
+          onClick={handleStartChat}
+          className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white text-xl font-medium rounded-2xl transition-all duration-200 hover:scale-105"
+        >
+          Talk to A Friend Here
+        </button>
       </div>
-    </AnimatedWrapper>
+    </div>
   );
 };

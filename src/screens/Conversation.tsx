@@ -14,6 +14,7 @@ import { useAtom, useAtomValue } from "jotai";
 import { screenAtom } from "@/store/screens";
 import { Button } from "@/components/ui/button";
 import { endConversation } from "@/api/endConversation";
+import { createConversation } from "@/api";
 import {
   MicIcon,
   MicOffIcon,
@@ -21,40 +22,17 @@ import {
   VideoOffIcon,
   PhoneIcon,
 } from "lucide-react";
-import {
-  clearSessionTime,
-  getSessionTime,
-  setSessionStartTime,
-  updateSessionEndTime,
-} from "@/utils";
-import { Timer } from "@/components/Timer";
-import { TIME_LIMIT } from "@/config";
-import { niceScoreAtom } from "@/store/game";
-import { naughtyScoreAtom } from "@/store/game";
 import { apiTokenAtom } from "@/store/tokens";
 import { quantum } from 'ldrs';
 import { cn } from "@/lib/utils";
 
 quantum.register();
 
-const timeToGoPhrases = [
-  "I'll need to dash off soon—let's make these last moments count.",
-  "I'll be heading out soon, but I've got a little more time for you!",
-  "I'll be leaving soon, but I'd love to hear one more thing before I go!",
-];
-
-const outroPhrases = [
-  "It's time for me to go now. Take care, and I'll see you soon!",
-  "I've got to get back to work. See you next time!",
-  "I must say goodbye for now. Stay well, and I'll see you soon!",
-];
-
 export const Conversation: React.FC = () => {
   const [conversation, setConversation] = useAtom(conversationAtom);
   const [, setScreenState] = useAtom(screenAtom);
-  const [naughtyScore] = useAtom(naughtyScoreAtom);
-  const [niceScore] = useAtom(niceScoreAtom);
   const token = useAtomValue(apiTokenAtom);
+  const [isLoading, setIsLoading] = useState(true);
 
   const daily = useDaily();
   const localSessionId = useLocalSessionId();
@@ -63,55 +41,22 @@ export const Conversation: React.FC = () => {
   const isCameraEnabled = !localVideo.isOff;
   const isMicEnabled = !localAudio.isOff;
   const remoteParticipantIds = useParticipantIds({ filter: "remote" });
-  const [start, setStart] = useState(false);
 
+  // Auto-create conversation when component mounts
   useEffect(() => {
-    if (remoteParticipantIds.length && !start) {
-      setStart(true);
-      setTimeout(() => daily?.setLocalAudio(true), 4000);
-    }
-  }, [remoteParticipantIds, start]);
+    const initConversation = async () => {
+      if (!token || conversation) return;
+      
+      try {
+        const newConversation = await createConversation(token);
+        setConversation(newConversation);
+      } catch (error) {
+        console.error("Failed to create conversation:", error);
+      }
+    };
 
-  useEffect(() => {
-    if (!remoteParticipantIds.length || !start) return;
-
-    setSessionStartTime();
-    const interval = setInterval(() => {
-      const time = getSessionTime();
-      if (time === TIME_LIMIT - 60) {
-        daily?.sendAppMessage({
-          message_type: "conversation",
-          event_type: "conversation.echo",
-          conversation_id: conversation?.conversation_id,
-          properties: {
-            modality: "text",
-            text:
-              timeToGoPhrases[Math.floor(Math.random() * 3)] ??
-              timeToGoPhrases[0],
-          },
-        });
-      }
-      if (time === TIME_LIMIT - 10) {
-        daily?.sendAppMessage({
-          message_type: "conversation",
-          event_type: "conversation.echo",
-          conversation_id: conversation?.conversation_id,
-          properties: {
-            modality: "text",
-            text:
-              outroPhrases[Math.floor(Math.random() * 3)] ?? outroPhrases[0],
-          },
-        });
-      }
-      if (time >= TIME_LIMIT) {
-        leaveConversation();
-        clearInterval(interval);
-      } else {
-        updateSessionEndTime();
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [remoteParticipantIds, start]);
+    initConversation();
+  }, [token, conversation, setConversation]);
 
   useEffect(() => {
     if (conversation?.conversation_url) {
@@ -124,9 +69,18 @@ export const Conversation: React.FC = () => {
         .then(() => {
           daily?.setLocalVideo(true);
           daily?.setLocalAudio(false);
+          setIsLoading(false);
         });
     }
-  }, [conversation?.conversation_url]);
+  }, [conversation?.conversation_url, daily]);
+
+  useEffect(() => {
+    if (remoteParticipantIds.length && !localAudio.isOff) return;
+    
+    if (remoteParticipantIds.length) {
+      setTimeout(() => daily?.setLocalAudio(true), 2000);
+    }
+  }, [remoteParticipantIds, daily, localAudio.isOff]);
 
   const toggleVideo = useCallback(() => {
     daily?.setLocalVideo(!isCameraEnabled);
@@ -143,28 +97,32 @@ export const Conversation: React.FC = () => {
       endConversation(token, conversation.conversation_id);
     }
     setConversation(null);
-    clearSessionTime();
+    setScreenState({ currentScreen: "finalScreen" });
+  }, [daily, token, conversation, setConversation, setScreenState]);
 
-    const naughtyScorePositive = Math.abs(naughtyScore);
-    if (naughtyScorePositive > niceScore) {
-      setScreenState({ currentScreen: "finalScreen" });
-    } else {
-      setScreenState({ currentScreen: "finalScreen" });
-    }
-  }, [daily, token]);
+  if (isLoading || !conversation) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black">
+        <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-12 border border-white/20">
+          <l-quantum
+            size="45"
+            speed="1.75"
+            color="white"
+          ></l-quantum>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <DialogWrapper>
-      <div className="absolute inset-0 size-full">
+    <div className="flex items-center justify-center min-h-screen bg-black">
+      <div className="relative w-full max-w-4xl aspect-video bg-white/10 backdrop-blur-sm rounded-3xl border border-white/20 overflow-hidden">
         {remoteParticipantIds?.length > 0 ? (
-          <>
-            <Timer />
-            <Video
-              id={remoteParticipantIds[0]}
-              className="size-full"
-              tileClassName="!object-cover"
-            />
-          </>
+          <Video
+            id={remoteParticipantIds[0]}
+            className="size-full"
+            tileClassName="!object-cover rounded-3xl"
+          />
         ) : (
           <div className="flex h-full items-center justify-center">
             <l-quantum
@@ -174,20 +132,21 @@ export const Conversation: React.FC = () => {
             ></l-quantum>
           </div>
         )}
+        
         {localSessionId && (
           <Video
             id={localSessionId}
             tileClassName="!object-cover"
             className={cn(
-              "absolute bottom-20 right-4 aspect-video h-40 w-24 overflow-hidden rounded-lg border-2 border-[#22C5FE] shadow-[0_0_20px_rgba(34,197,254,0.3)] sm:bottom-12 lg:h-auto lg:w-52"
+              "absolute bottom-4 right-4 aspect-video h-32 w-48 overflow-hidden rounded-lg border-2 border-blue-500"
             )}
           />
         )}
-        <div className="absolute bottom-8 right-1/2 z-10 flex translate-x-1/2 justify-center gap-4">
+        
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-4">
           <Button
             size="icon"
-            className="border border-[#22C5FE] shadow-[0_0_20px_rgba(34,197,254,0.2)]"
-            variant="secondary"
+            className="bg-black/50 border border-white/20 hover:bg-black/70"
             onClick={toggleAudio}
           >
             {!isMicEnabled ? (
@@ -198,8 +157,7 @@ export const Conversation: React.FC = () => {
           </Button>
           <Button
             size="icon"
-            className="border border-[#22C5FE] shadow-[0_0_20px_rgba(34,197,254,0.2)]"
-            variant="secondary"
+            className="bg-black/50 border border-white/20 hover:bg-black/70"
             onClick={toggleVideo}
           >
             {!isCameraEnabled ? (
@@ -210,15 +168,15 @@ export const Conversation: React.FC = () => {
           </Button>
           <Button
             size="icon"
-            className="bg-[rgba(251,36,71,0.80)] backdrop-blur hover:bg-[rgba(251,36,71,0.60)] border border-[rgba(251,36,71,0.9)] shadow-[0_0_20px_rgba(251,36,71,0.3)]"
-            variant="secondary"
+            className="bg-red-600 hover:bg-red-700"
             onClick={leaveConversation}
           >
             <PhoneIcon className="size-6 rotate-[135deg]" />
           </Button>
         </div>
+        
         <DailyAudio />
       </div>
-    </DialogWrapper>
+    </div>
   );
 };
