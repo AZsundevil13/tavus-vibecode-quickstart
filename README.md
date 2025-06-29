@@ -11,9 +11,10 @@ Your personal AI best friend available 24/7. This React application provides a f
 > - Follow security best practices for handling sensitive credentials
 
 ## 🤖 Current Configuration
+- **Conversation ID**: ca1be2f942003490
 - **Replica ID**: r91c80eca351
 - **Conversation Status**: Active
-- **Last Updated**: June 28, 8:21 pm
+- **Last Updated**: June 28, 9:16 pm
 
 <br></br>
 ## 🛠️ Tech Stack
@@ -42,13 +43,14 @@ Spin up this template in under a minute with StackBlitz:
    ```
 
 3. **Customize your AI friend persona:**
-   - Update the `persona_id` and `replica_id` in `createConversation.ts` with your own
+   - Update the `persona_id`, `replica_id`, and `conversation_id` in `createConversation.ts` with your own
    - Learn how to [create your own persona](https://docs.tavus.io/sections/conversational-video-interface/creating-a-persona) on the [Tavus Platform](https://platform.tavus.io/)
 
    ```typescript
    body: JSON.stringify({
      persona_id: "your_persona_id_here",
      replica_id: "your_replica_id_here",
+     conversation_id: "your_conversation_id_here",
    }),
    ```
 
