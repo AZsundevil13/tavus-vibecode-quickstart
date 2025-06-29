@@ -12,8 +12,9 @@ import {
   Conversation,
   FinalScreen,
   Settings,
+  SessionReports,
+  ClientManagement,
 } from "./screens";
-import { SessionReports } from "./screens/SessionReports";
 
 function App() {
   const [{ currentScreen }] = useAtom(screenAtom);
@@ -38,6 +39,8 @@ function App() {
         return <FinalScreen />;
       case "sessionReports":
         return <SessionReports />;
+      case "clientManagement":
+        return <ClientManagement />;
       default:
         return <IntroLoading />;
     }

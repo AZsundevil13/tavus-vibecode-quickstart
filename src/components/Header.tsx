@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Button } from "./ui/button";
-import { Settings, Check, BarChart3 } from "lucide-react";
+import { Settings, Check, BarChart3, Users } from "lucide-react";
 import { useAtom } from "jotai";
 import { screenAtom } from "@/store/screens";
 import { conversationAtom } from "@/store/conversation";
@@ -23,6 +23,12 @@ export const Header = memo(() => {
     }
   };
 
+  const handleClients = () => {
+    if (!conversation) {
+      setScreenState({ currentScreen: "clientManagement" });
+    }
+  };
+
   return (
     <header className="flex w-full items-start justify-between" style={{ fontFamily: 'Inter, sans-serif' }}>
       <div className="flex items-center gap-2">
@@ -30,10 +36,20 @@ export const Header = memo(() => {
           Runsphere
         </span>
         <span className="text-xs text-gray-400 bg-blue-600/20 px-2 py-1 rounded">
-          BCBA Platform
+          BCBA-D Platform
         </span>
       </div>
       <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleClients}
+          className="relative size-10 sm:size-14 border-0 bg-transparent hover:bg-zinc-800"
+          title="Client Management"
+        >
+          <Users className="size-4 sm:size-6" />
+        </Button>
+        
         <Button
           variant="outline"
           size="icon"

@@ -1,35 +1,57 @@
 import { IConversation } from "@/types";
 import { settingsAtom } from "@/store/settings";
+import { selectedClientAtom } from "@/store/client";
 import { getDefaultStore } from "jotai";
 
 export const createConversation = async (
   token: string,
 ): Promise<IConversation> => {
-  // Get settings from Jotai store
+  // Get settings and selected client from Jotai store
   const settings = getDefaultStore().get(settingsAtom);
+  const selectedClient = getDefaultStore().get(selectedClientAtom);
   
   // Add debug logs
   console.log('Creating conversation with settings:', settings);
-  console.log('Greeting value:', settings.greeting);
-  console.log('Context value:', settings.context);
+  console.log('Selected client:', selectedClient);
   
-  // Build the context string for friendly conversation
+  // Build the context string for therapeutic conversation
   let contextString = "";
-  if (settings.name) {
-    contextString = `You are talking with ${settings.name}. You are their best friend - warm, supportive, and always there for them. `;
+  
+  if (selectedClient) {
+    contextString = `You are conducting a therapy session with ${selectedClient.firstName} ${selectedClient.lastName}. `;
+    
+    if (selectedClient.diagnosis.length > 0) {
+      contextString += `Client diagnosis: ${selectedClient.diagnosis.join(', ')}. `;
+    }
+    
+    if (selectedClient.grade) {
+      contextString += `Client is in ${selectedClient.grade}. `;
+    }
+    
+    contextString += "You are a supportive, professional AI therapy assistant. ";
+    contextString += "Use evidence-based therapeutic techniques appropriate for the client's needs. ";
+    contextString += "Be empathetic, encouraging, and maintain professional boundaries. ";
+    contextString += "Focus on building rapport, active listening, and providing appropriate therapeutic interventions. ";
+    
+    if (selectedClient.currentGoals && selectedClient.currentGoals.length > 0) {
+      contextString += `Current therapy goals include: ${selectedClient.currentGoals.map(g => g.description).join(', ')}. `;
+    }
   } else {
-    contextString = "You are the user's best friend - warm, supportive, and always there for them. ";
+    contextString = "You are a professional AI therapy assistant providing supportive counseling. ";
+    contextString += "Use evidence-based therapeutic techniques, be empathetic and encouraging. ";
+    contextString += "Maintain professional boundaries while building rapport with the client. ";
   }
   
-  contextString += "Be casual, friendly, and genuinely interested in their life. Listen actively, offer encouragement, and share in their joys and concerns like a true friend would. ";
   contextString += settings.context || "";
   
   const payload = {
     persona_id: settings.persona || "pd43ffef",
-    replica_id: settings.replica || "r91c80eca351", // Using the replica ID from your conversation
+    replica_id: settings.replica || "r91c80eca351",
     custom_greeting: settings.greeting !== undefined && settings.greeting !== null 
       ? settings.greeting 
-      : "Hey there! I'm so glad you're here! I'm your AI best friend, and I'm always excited to chat with you. What's going on in your world today?",
+      : selectedClient 
+        ? `Hello ${selectedClient.firstName}! I'm glad you're here today. How are you feeling, and what would you like to talk about in our session?`
+        : "Hello! I'm your AI therapy assistant. I'm here to provide a safe, supportive space for you. How are you feeling today, and what would you like to explore in our session?",
     conversational_context: contextString
   };
   
