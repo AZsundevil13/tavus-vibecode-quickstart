@@ -58,14 +58,14 @@ export const Conversation: React.FC = () => {
       setIsCreatingConversation(true);
       
       try {
-        console.log("Creating conversation with token:", token);
-        const newConversation = await createConversation(token);
-        console.log("Conversation created successfully:", newConversation);
-        setConversation(newConversation);
+        console.log("Setting up conversation with token:", token);
+        const existingConversation = await createConversation(token);
+        console.log("Conversation setup successful:", existingConversation);
+        setConversation(existingConversation);
         setError(null);
       } catch (error) {
-        console.error("Failed to create conversation:", error);
-        setError(`Failed to create conversation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error("Failed to setup conversation:", error);
+        setError(`Failed to setup conversation: ${error instanceof Error ? error.message : 'Unknown error'}`);
         setIsLoading(false);
       } finally {
         setIsCreatingConversation(false);
@@ -177,9 +177,9 @@ export const Conversation: React.FC = () => {
             color="white"
           ></l-quantum>
           <p className="text-white mt-4">
-            {isCreatingConversation ? 'Creating conversation...' : 
-             isJoiningCall ? 'Joining call...' : 
-             'Setting up your conversation...'}
+            {isCreatingConversation ? 'Setting up conversation...' : 
+             isJoiningCall ? 'Connecting to your AI friend...' : 
+             'Loading...'}
           </p>
         </div>
       </div>
