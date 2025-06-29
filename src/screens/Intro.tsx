@@ -7,10 +7,10 @@ export const Intro: React.FC = () => {
   const [, setScreenState] = useAtom(screenAtom);
   const [token, setToken] = useAtom(apiTokenAtom);
 
-  // Set the default API key
+  // Set the updated API key
   React.useEffect(() => {
     if (!token) {
-      const defaultToken = "b8165da727e64a6aa657fae125258863";
+      const defaultToken = "a585d2b465da47238e21335438dd4d1c";
       setToken(defaultToken);
       localStorage.setItem('tavus-token', defaultToken);
     }
