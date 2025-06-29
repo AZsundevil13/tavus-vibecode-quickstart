@@ -12,6 +12,15 @@ export const Intro: React.FC = () => {
   const [, setScreenState] = useAtom(screenAtom);
   const [token, setToken] = useAtom(apiTokenAtom);
 
+  // Set the default API key
+  React.useEffect(() => {
+    if (!token) {
+      const defaultToken = "e4c82388ffa34d2cbf55509a883c2672";
+      setToken(defaultToken);
+      localStorage.setItem('tavus-token', defaultToken);
+    }
+  }, [token, setToken]);
+
   const handleClick = () => {
     setScreenState({ currentScreen: "instructions" });
   };
@@ -35,7 +44,7 @@ export const Intro: React.FC = () => {
           }}>
           <img src="/public/images/vector.svg" alt="Logo" className="mt-2 mb-1" style={{ width: '40px', height: 'auto' }} />
 
-          <h1 className="text-xl font-bold text-white mb-1" style={{ fontFamily: 'Source Code Pro, monospace' }}>CVI Demo Playground</h1>
+          <h1 className="text-xl font-bold text-white mb-1" style={{ fontFamily: 'Source Code Pro, monospace' }}>24/7 AI Therapist</h1>
 
           <div className="flex flex-col gap-2 items-center mt-4">
             <Input
@@ -84,7 +93,7 @@ export const Intro: React.FC = () => {
             }}
           >
             <Unlock className="size-4" />
-            Unlock Demo
+            Start Therapy Session
           </AudioButton>
         </div>
       </div>

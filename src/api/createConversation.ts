@@ -13,18 +13,22 @@ export const createConversation = async (
   console.log('Greeting value:', settings.greeting);
   console.log('Context value:', settings.context);
   
-  // Build the context string
+  // Build the context string for therapy
   let contextString = "";
   if (settings.name) {
-    contextString = `You are talking with the user, ${settings.name}. Additional context: `;
+    contextString = `You are talking with ${settings.name}. You are a compassionate, professional AI therapist. `;
+  } else {
+    contextString = "You are a compassionate, professional AI therapist. ";
   }
+  
+  contextString += "Provide supportive, empathetic responses and help the user explore their thoughts and feelings in a safe, non-judgmental environment. ";
   contextString += settings.context || "";
   
   const payload = {
     persona_id: settings.persona || "pd43ffef",
     custom_greeting: settings.greeting !== undefined && settings.greeting !== null 
       ? settings.greeting 
-      : "Hey there! I'm your technical co-pilot! Let's get get started building with Tavus.",
+      : "Hello, I'm your AI therapist. I'm here to provide you with a safe, confidential space to talk about whatever is on your mind. How are you feeling today?",
     conversational_context: contextString
   };
   

@@ -1,8 +1,8 @@
-# Tavus Vibecode Quickstart
+# 24/7 AI Therapist
 
 ## 🚀 Introduction
 
-The fastest way to get started vibecoding with Tavus CVI. This React quickstart template provides everything you need to create interactive video experiences powered by Tavus's Conversational Video Interface technology.
+Your personal AI therapist available 24/7. This React application provides a safe, confidential space for therapeutic conversations powered by Tavus's Conversational Video Interface technology.
 
 > ⚠️ **Important Note**: This is a development template only. For production use, you must:
 > - Never expose your Tavus API keys in the frontend
@@ -30,13 +30,13 @@ Spin up this template in under a minute with StackBlitz:
    - Create an account on [Tavus Platform](https://platform.tavus.io/api-keys)
    - Generate your API token
 
-2. **Run the template:**
+2. **Run the application:**
    ```bash
    npm install
    npm run dev
    ```
 
-3. **Customize your persona:**
+3. **Customize your therapist persona:**
    - Update the `persona_id` in `createConversation.ts` with your own
    - Learn how to [create your own persona](https://docs.tavus.io/sections/conversational-video-interface/creating-a-persona) on the [Tavus Platform](https://platform.tavus.io/)
 
