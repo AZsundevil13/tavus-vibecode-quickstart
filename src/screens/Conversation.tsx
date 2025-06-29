@@ -44,7 +44,7 @@ export const Conversation: React.FC = () => {
   const isMicEnabled = !localAudio.isOff;
   const remoteParticipantIds = useParticipantIds({ filter: "remote" });
 
-  // Auto-create conversation when component mounts
+  // Create a fresh conversation for each user session
   useEffect(() => {
     const initConversation = async () => {
       if (!token) {
@@ -58,14 +58,14 @@ export const Conversation: React.FC = () => {
       setIsCreatingConversation(true);
       
       try {
-        console.log("Setting up conversation with token:", token);
-        const existingConversation = await createConversation(token);
-        console.log("Conversation setup successful:", existingConversation);
-        setConversation(existingConversation);
+        console.log("Creating new therapy session with token:", token);
+        const newConversation = await createConversation(token);
+        console.log("Therapy session created successfully:", newConversation);
+        setConversation(newConversation);
         setError(null);
       } catch (error) {
-        console.error("Failed to setup conversation:", error);
-        setError(`Failed to setup conversation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error("Failed to create therapy session:", error);
+        setError(`Failed to start session: ${error instanceof Error ? error.message : 'Unknown error'}`);
         setIsLoading(false);
       } finally {
         setIsCreatingConversation(false);
@@ -82,7 +82,7 @@ export const Conversation: React.FC = () => {
       setIsJoiningCall(true);
       
       try {
-        console.log("Joining call with URL:", conversation.conversation_url);
+        console.log("Joining therapy session with URL:", conversation.conversation_url);
         
         await daily.join({
           url: conversation.conversation_url,
@@ -90,14 +90,14 @@ export const Conversation: React.FC = () => {
           startAudioOff: true,
         });
         
-        console.log("Successfully joined call");
+        console.log("Successfully joined therapy session");
         daily.setLocalVideo(true);
         daily.setLocalAudio(false);
         setIsLoading(false);
         setError(null);
       } catch (error) {
-        console.error("Failed to join call:", error);
-        setError(`Failed to join call: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error("Failed to join therapy session:", error);
+        setError(`Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}`);
         setIsLoading(false);
       } finally {
         setIsJoiningCall(false);
@@ -111,7 +111,7 @@ export const Conversation: React.FC = () => {
     if (remoteParticipantIds.length && !localAudio.isOff) return;
     
     if (remoteParticipantIds.length) {
-      console.log("Remote participant joined, enabling audio");
+      console.log("AI therapist joined, enabling audio");
       setTimeout(() => daily?.setLocalAudio(true), 2000);
     }
   }, [remoteParticipantIds, daily, localAudio.isOff]);
@@ -153,7 +153,7 @@ export const Conversation: React.FC = () => {
               onClick={retryConnection}
               className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
-              Retry
+              Try Again
             </button>
             <button
               onClick={() => setScreenState({ currentScreen: "intro" })}
@@ -177,9 +177,9 @@ export const Conversation: React.FC = () => {
             color="white"
           ></l-quantum>
           <p className="text-white mt-4">
-            {isCreatingConversation ? 'Setting up conversation...' : 
-             isJoiningCall ? 'Connecting to your AI friend...' : 
-             'Loading...'}
+            {isCreatingConversation ? 'Creating your therapy session...' : 
+             isJoiningCall ? 'Connecting to your AI therapist...' : 
+             'Preparing your session...'}
           </p>
         </div>
       </div>
@@ -203,7 +203,7 @@ export const Conversation: React.FC = () => {
                 speed="1.75"
                 color="white"
               ></l-quantum>
-              <p className="text-white mt-4">Waiting for your AI friend to join...</p>
+              <p className="text-white mt-4">Your AI therapist is joining...</p>
             </div>
           </div>
         )}

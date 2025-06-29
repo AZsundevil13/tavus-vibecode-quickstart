@@ -4,15 +4,29 @@ export const createConversation = async (
   token: string,
 ): Promise<IConversation> => {
   
-  // Use the existing conversation details provided by the user
-  const existingConversation: IConversation = {
-    conversation_id: "ce9fd506683b648a",
-    conversation_name: "AI Friend Chat",
-    status: "active" as any, // Override the ended status to active for new sessions
-    conversation_url: "https://tavus.daily.co/ce9fd506683b648a",
-    created_at: "June 28, 10:20 pm"
+  const payload = {
+    persona_id: "pd43ffef",
+    replica_id: "r91c80eca351",
+    custom_greeting: "Hello! I'm here to listen and support you. This is a safe space where you can share whatever is on your mind. How are you feeling today?",
+    conversational_context: "You are a compassionate, professional AI therapist. Provide a warm, supportive, and non-judgmental environment. Listen actively, ask thoughtful questions, and offer gentle guidance. Focus on emotional support, coping strategies, and helping users process their thoughts and feelings. Always maintain professional boundaries while being genuinely caring and empathetic."
   };
   
-  console.log("Using existing conversation:", existingConversation);
-  return existingConversation;
+  const response = await fetch("https://tavusapi.com/v2/conversations", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": token ?? "",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response?.ok) {
+    const errorText = await response.text();
+    console.error(`API Error: ${response.status} - ${errorText}`);
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const data = await response.json();
+  console.log("New conversation created:", data);
+  return data;
 };
