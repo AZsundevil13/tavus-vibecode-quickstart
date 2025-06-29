@@ -35,6 +35,7 @@ export const Conversation: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [isJoiningCall, setIsJoiningCall] = useState(false);
+  const [showTokenError, setShowTokenError] = useState(false);
 
   const daily = useDaily();
   const localSessionId = useLocalSessionId();
@@ -63,9 +64,18 @@ export const Conversation: React.FC = () => {
         console.log("Therapy session created successfully:", newConversation);
         setConversation(newConversation);
         setError(null);
+        setShowTokenError(false);
       } catch (error) {
         console.error("Failed to create therapy session:", error);
-        setError(`Failed to start session: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        
+        // Check if it's a concurrent conversations error
+        if (errorMessage.includes('maximum concurrent conversations') || errorMessage.includes('status: 400')) {
+          setShowTokenError(true);
+          setError('The shared API token has reached its limit. Please use your own Tavus API token to continue.');
+        } else {
+          setError(`Failed to start session: ${errorMessage}`);
+        }
         setIsLoading(false);
       } finally {
         setIsCreatingConversation(false);
@@ -140,21 +150,58 @@ export const Conversation: React.FC = () => {
     setConversation(null);
     setIsCreatingConversation(false);
     setIsJoiningCall(false);
+    setShowTokenError(false);
   }, [setConversation]);
+
+  const goBackToSetupToken = useCallback(() => {
+    setScreenState({ currentScreen: "intro" });
+  }, [setScreenState]);
 
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black">
         <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-12 border border-white/20 text-center max-w-md">
-          <h2 className="text-xl font-bold text-red-400 mb-4">Connection Error</h2>
+          <h2 className="text-xl font-bold text-red-400 mb-4">
+            {showTokenError ? "API Token Limit Reached" : "Connection Error"}
+          </h2>
           <p className="text-white mb-6">{error}</p>
+          
+          {showTokenError && (
+            <div className="mb-6 p-4 bg-yellow-500/20 rounded-xl border border-yellow-400/30">
+              <p className="text-yellow-200 text-sm mb-2">
+                💡 <strong>Solution:</strong>
+              </p>
+              <p className="text-yellow-200 text-sm">
+                Get your free API token from{" "}
+                <a 
+                  href="https://platform.tavus.io/api-keys" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-yellow-100 underline hover:text-white"
+                >
+                  Tavus Platform
+                </a>
+                {" "}and use it in the app.
+              </p>
+            </div>
+          )}
+          
           <div className="flex gap-4 justify-center">
-            <button
-              onClick={retryConnection}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-            >
-              Try Again
-            </button>
+            {showTokenError ? (
+              <button
+                onClick={goBackToSetupToken}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                Setup Your Token
+              </button>
+            ) : (
+              <button
+                onClick={retryConnection}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                Try Again
+              </button>
+            )}
             <button
               onClick={() => setScreenState({ currentScreen: "intro" })}
               className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
