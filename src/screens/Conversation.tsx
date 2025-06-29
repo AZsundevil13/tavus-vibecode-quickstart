@@ -159,8 +159,8 @@ export const Conversation: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-black">
-        <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-12 border border-white/20 text-center max-w-md">
+      <div className="flex items-center justify-center min-h-screen bg-black p-4">
+        <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 border border-white/20 text-center max-w-md w-full">
           <h2 className="text-xl font-bold text-red-400 mb-4">
             {showTokenError ? "API Token Limit Reached" : "Connection Error"}
           </h2>
@@ -186,7 +186,7 @@ export const Conversation: React.FC = () => {
             </div>
           )}
           
-          <div className="flex gap-4 justify-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
             {showTokenError ? (
               <button
                 onClick={goBackToSetupToken}
@@ -216,8 +216,8 @@ export const Conversation: React.FC = () => {
 
   if (isLoading || !conversation) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-black">
-        <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-12 border border-white/20 text-center">
+      <div className="flex items-center justify-center min-h-screen bg-black p-4">
+        <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 border border-white/20 text-center">
           <l-quantum
             size="45"
             speed="1.75"
@@ -234,8 +234,9 @@ export const Conversation: React.FC = () => {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-black">
-      <div className="relative w-full max-w-4xl aspect-video bg-white/10 backdrop-blur-sm rounded-3xl border border-white/20 overflow-hidden">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-black p-4">
+      {/* Desktop Layout - Side by side */}
+      <div className="hidden lg:block relative w-full max-w-6xl aspect-video bg-white/10 backdrop-blur-sm rounded-3xl border border-white/20 overflow-hidden">
         {remoteParticipantIds?.length > 0 ? (
           <Video
             id={remoteParticipantIds[0]}
@@ -259,9 +260,7 @@ export const Conversation: React.FC = () => {
           <Video
             id={localSessionId}
             tileClassName="!object-cover"
-            className={cn(
-              "absolute bottom-4 right-4 aspect-video h-32 w-48 overflow-hidden rounded-lg border-2 border-blue-500"
-            )}
+            className="absolute bottom-4 right-4 aspect-video h-32 w-48 overflow-hidden rounded-lg border-2 border-blue-500"
           />
         )}
         
@@ -296,9 +295,84 @@ export const Conversation: React.FC = () => {
             <PhoneIcon className="size-6 rotate-[135deg]" />
           </Button>
         </div>
-        
-        <DailyAudio />
       </div>
+
+      {/* Mobile/Tablet Layout - Stacked vertically */}
+      <div className="lg:hidden w-full max-w-md flex flex-col gap-4">
+        {/* AI Therapist Video - Top */}
+        <div className="relative w-full aspect-[4/3] bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
+          {remoteParticipantIds?.length > 0 ? (
+            <Video
+              id={remoteParticipantIds[0]}
+              className="size-full"
+              tileClassName="!object-cover rounded-2xl"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <div className="text-center">
+                <l-quantum
+                  size="35"
+                  speed="1.75"
+                  color="white"
+                ></l-quantum>
+                <p className="text-white mt-3 text-sm">AI Therapist joining...</p>
+              </div>
+            </div>
+          )}
+          <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-1">
+            <p className="text-white text-xs font-medium">AI Therapist</p>
+          </div>
+        </div>
+
+        {/* User Video - Bottom */}
+        {localSessionId && (
+          <div className="relative w-full aspect-[4/3] bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
+            <Video
+              id={localSessionId}
+              tileClassName="!object-cover rounded-2xl"
+              className="size-full"
+            />
+            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-1">
+              <p className="text-white text-xs font-medium">You</p>
+            </div>
+          </div>
+        )}
+
+        {/* Controls - Bottom */}
+        <div className="flex justify-center gap-4 mt-2">
+          <Button
+            size="icon"
+            className="bg-black/50 border border-white/20 hover:bg-black/70 h-12 w-12"
+            onClick={toggleAudio}
+          >
+            {!isMicEnabled ? (
+              <MicOffIcon className="size-5" />
+            ) : (
+              <MicIcon className="size-5" />
+            )}
+          </Button>
+          <Button
+            size="icon"
+            className="bg-black/50 border border-white/20 hover:bg-black/70 h-12 w-12"
+            onClick={toggleVideo}
+          >
+            {!isCameraEnabled ? (
+              <VideoOffIcon className="size-5" />
+            ) : (
+              <VideoIcon className="size-5" />
+            )}
+          </Button>
+          <Button
+            size="icon"
+            className="bg-red-600 hover:bg-red-700 h-12 w-12"
+            onClick={leaveConversation}
+          >
+            <PhoneIcon className="size-5 rotate-[135deg]" />
+          </Button>
+        </div>
+      </div>
+      
+      <DailyAudio />
     </div>
   );
 };
