@@ -15,7 +15,7 @@ export const Intro: React.FC = () => {
   // Set the default API key
   React.useEffect(() => {
     if (!token) {
-      const defaultToken = "e4c82388ffa34d2cbf55509a883c2672";
+      const defaultToken = "b8165da727e64a6aa657fae125258863";
       setToken(defaultToken);
       localStorage.setItem('tavus-token', defaultToken);
     }
