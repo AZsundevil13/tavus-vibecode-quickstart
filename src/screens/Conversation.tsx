@@ -32,6 +32,8 @@ export const Conversation: React.FC = () => {
   const [, setScreenState] = useAtom(screenAtom);
   const token = useAtomValue(apiTokenAtom);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [connectionAttempts, setConnectionAttempts] = useState(0);
 
   const daily = useDaily();
   const localSessionId = useLocalSessionId();
@@ -44,13 +46,24 @@ export const Conversation: React.FC = () => {
   // Auto-create conversation when component mounts
   useEffect(() => {
     const initConversation = async () => {
-      if (!token || conversation) return;
+      if (!token) {
+        setError("No API token available");
+        setIsLoading(false);
+        return;
+      }
+      
+      if (conversation) return;
       
       try {
+        console.log("Creating conversation with token:", token);
         const newConversation = await createConversation(token);
+        console.log("Conversation created successfully:", newConversation);
         setConversation(newConversation);
+        setError(null);
       } catch (error) {
         console.error("Failed to create conversation:", error);
+        setError(`Failed to create conversation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        setIsLoading(false);
       }
     };
 
@@ -58,25 +71,49 @@ export const Conversation: React.FC = () => {
   }, [token, conversation, setConversation]);
 
   useEffect(() => {
-    if (conversation?.conversation_url) {
-      daily
-        ?.join({
+    if (!conversation?.conversation_url || !daily) return;
+
+    const joinCall = async () => {
+      try {
+        console.log("Joining call with URL:", conversation.conversation_url);
+        setConnectionAttempts(prev => prev + 1);
+        
+        await daily.join({
           url: conversation.conversation_url,
           startVideoOff: false,
           startAudioOff: true,
-        })
-        .then(() => {
-          daily?.setLocalVideo(true);
-          daily?.setLocalAudio(false);
-          setIsLoading(false);
         });
-    }
-  }, [conversation?.conversation_url, daily]);
+        
+        console.log("Successfully joined call");
+        daily.setLocalVideo(true);
+        daily.setLocalAudio(false);
+        setIsLoading(false);
+        setError(null);
+      } catch (error) {
+        console.error("Failed to join call:", error);
+        setError(`Failed to join call: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        
+        // Retry logic
+        if (connectionAttempts < 3) {
+          console.log(`Retrying connection (attempt ${connectionAttempts + 1}/3)`);
+          setTimeout(() => {
+            setIsLoading(true);
+            setError(null);
+          }, 2000);
+        } else {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    joinCall();
+  }, [conversation?.conversation_url, daily, connectionAttempts]);
 
   useEffect(() => {
     if (remoteParticipantIds.length && !localAudio.isOff) return;
     
     if (remoteParticipantIds.length) {
+      console.log("Remote participant joined, enabling audio");
       setTimeout(() => daily?.setLocalAudio(true), 2000);
     }
   }, [remoteParticipantIds, daily, localAudio.isOff]);
@@ -99,15 +136,50 @@ export const Conversation: React.FC = () => {
     setScreenState({ currentScreen: "finalScreen" });
   }, [daily, token, conversation, setConversation, setScreenState]);
 
+  const retryConnection = useCallback(() => {
+    setIsLoading(true);
+    setError(null);
+    setConnectionAttempts(0);
+    setConversation(null);
+  }, [setConversation]);
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black">
+        <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-12 border border-white/20 text-center max-w-md">
+          <h2 className="text-xl font-bold text-red-400 mb-4">Connection Error</h2>
+          <p className="text-white mb-6">{error}</p>
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={retryConnection}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => setScreenState({ currentScreen: "intro" })}
+              className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading || !conversation) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black">
-        <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-12 border border-white/20">
+        <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-12 border border-white/20 text-center">
           <l-quantum
             size="45"
             speed="1.75"
             color="white"
           ></l-quantum>
+          <p className="text-white mt-4">
+            {connectionAttempts > 0 ? `Connecting... (attempt ${connectionAttempts}/3)` : 'Setting up your conversation...'}
+          </p>
         </div>
       </div>
     );
@@ -124,11 +196,14 @@ export const Conversation: React.FC = () => {
           />
         ) : (
           <div className="flex h-full items-center justify-center">
-            <l-quantum
-              size="45"
-              speed="1.75"
-              color="white"
-            ></l-quantum>
+            <div className="text-center">
+              <l-quantum
+                size="45"
+                speed="1.75"
+                color="white"
+              ></l-quantum>
+              <p className="text-white mt-4">Waiting for your AI friend to join...</p>
+            </div>
           </div>
         )}
         
