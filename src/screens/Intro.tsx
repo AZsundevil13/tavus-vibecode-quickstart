@@ -42,9 +42,7 @@ export const Intro: React.FC = () => {
             fontFamily: 'Inter, sans-serif',
             background: 'rgba(0,0,0,0.3)'
           }}>
-          <img src="/public/images/vector.svg" alt="Logo" className="mt-2 mb-1" style={{ width: '40px', height: 'auto' }} />
-
-          <h1 className="text-xl font-bold text-white mb-1" style={{ fontFamily: 'Source Code Pro, monospace' }}>Your Best Friend Anytime</h1>
+          <h1 className="text-2xl font-bold text-white mb-1" style={{ fontFamily: 'Source Code Pro, monospace' }}>Runsphere</h1>
 
           <div className="flex flex-col gap-2 items-center mt-4">
             <Input

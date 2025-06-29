@@ -20,13 +20,8 @@ export const Header = memo(() => {
   return (
     <header className="flex w-full items-start justify-between" style={{ fontFamily: 'Inter, sans-serif' }}>
       <div className="flex items-center gap-2">
-        <img
-          src="/public/images/vector.svg"
-          alt="Your Best Friend Anytime"
-          className="relative h-8 sm:h-10"
-        />
-        <span className="text-white font-bold text-lg sm:text-xl" style={{ fontFamily: 'Source Code Pro, monospace' }}>
-          Your Best Friend Anytime
+        <span className="text-white font-bold text-xl sm:text-2xl" style={{ fontFamily: 'Source Code Pro, monospace' }}>
+          Runsphere
         </span>
       </div>
       <div className="relative">
