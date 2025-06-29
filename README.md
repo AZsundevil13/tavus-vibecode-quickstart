@@ -1,8 +1,8 @@
-# 24/7 AI Therapist
+# Your Best Friend Anytime
 
 ## 🚀 Introduction
 
-Your personal AI therapist available 24/7. This React application provides a safe, confidential space for therapeutic conversations powered by Tavus's Conversational Video Interface technology.
+Your personal AI best friend available 24/7. This React application provides a friendly, supportive companion for conversations powered by Tavus's Conversational Video Interface technology.
 
 > ⚠️ **Important Note**: This is a development template only. For production use, you must:
 > - Never expose your Tavus API keys in the frontend
@@ -36,7 +36,7 @@ Spin up this template in under a minute with StackBlitz:
    npm run dev
    ```
 
-3. **Customize your therapist persona:**
+3. **Customize your AI friend persona:**
    - Update the `persona_id` in `createConversation.ts` with your own
    - Learn how to [create your own persona](https://docs.tavus.io/sections/conversational-video-interface/creating-a-persona) on the [Tavus Platform](https://platform.tavus.io/)
 

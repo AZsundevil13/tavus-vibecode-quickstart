@@ -44,7 +44,7 @@ export const Intro: React.FC = () => {
           }}>
           <img src="/public/images/vector.svg" alt="Logo" className="mt-2 mb-1" style={{ width: '40px', height: 'auto' }} />
 
-          <h1 className="text-xl font-bold text-white mb-1" style={{ fontFamily: 'Source Code Pro, monospace' }}>24/7 AI Therapist</h1>
+          <h1 className="text-xl font-bold text-white mb-1" style={{ fontFamily: 'Source Code Pro, monospace' }}>Your Best Friend Anytime</h1>
 
           <div className="flex flex-col gap-2 items-center mt-4">
             <Input
@@ -93,7 +93,7 @@ export const Intro: React.FC = () => {
             }}
           >
             <Unlock className="size-4" />
-            Start Therapy Session
+            Chat with Your Friend
           </AudioButton>
         </div>
       </div>

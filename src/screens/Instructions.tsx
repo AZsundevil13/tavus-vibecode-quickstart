@@ -168,13 +168,13 @@ export const Instructions: React.FC = () => {
             fontFamily: 'Source Code Pro, monospace'
           }}
         >
-          <span className="text-white">Your AI Therapist</span>{" "}
+          <span className="text-white">Your Best Friend</span>{" "}
           <span style={{
             color: '#9EEAFF'
-          }}>is Ready.</span>
+          }}>is Here.</span>
         </h1>
         <p className="max-w-[650px] text-center text-base sm:text-lg text-gray-400 mb-12">
-          Connect with your personal AI therapist for confidential, judgment-free support available 24/7. Start your healing journey today.
+          Connect with your AI best friend who's always available to chat, listen, and support you through anything. No judgment, just genuine friendship.
         </p>
         <Button
           onClick={handleClick}
@@ -193,12 +193,12 @@ export const Instructions: React.FC = () => {
           }}
         >
           <Video className="size-5" />
-          Begin Therapy Session
+          Start Chatting
           {getUserMediaError && (
             <div className="absolute -top-1 left-0 right-0 flex items-center gap-1 text-wrap rounded-lg border bg-red-500 p-2 text-white backdrop-blur-sm">
               <AlertTriangle className="text-red size-4" />
               <p>
-                To chat with your AI therapist, please allow microphone access. Check your
+                To chat with your AI friend, please allow microphone access. Check your
                 browser settings.
               </p>
             </div>
@@ -215,7 +215,7 @@ export const Instructions: React.FC = () => {
           </div>
         </div>
         <span className="absolute bottom-6 px-4 text-sm text-gray-500 sm:bottom-8 sm:px-8 text-center">
-          By starting a therapy session, I accept the{' '}
+          By starting a chat, I accept the{' '}
           <a href="#" className="text-primary hover:underline">Terms of Use</a> and acknowledge the{' '}
           <a href="#" className="text-primary hover:underline">Privacy Policy</a>.
         </span>
@@ -230,9 +230,9 @@ export const PositiveFeedback: React.FC = () => {
       <AnimatedTextBlockWrapper>
         <StaticTextBlockWrapper
           imgSrc="/images/positive.png"
-          title="Great Session!"
+          title="Great Chat!"
           titleClassName="sm:max-w-full bg-[linear-gradient(91deg,_#43BF8F_16.63%,_#FFF_86.96%)]"
-          description="Thank you for the meaningful conversation. Your AI therapist is here whenever you need support."
+          description="Thanks for the wonderful conversation! Your AI friend is always here when you need someone to talk to."
         />
       </AnimatedTextBlockWrapper>
     </DialogWrapper>

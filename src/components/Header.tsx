@@ -22,11 +22,11 @@ export const Header = memo(() => {
       <div className="flex items-center gap-2">
         <img
           src="/public/images/vector.svg"
-          alt="24/7 AI Therapist"
+          alt="Your Best Friend Anytime"
           className="relative h-8 sm:h-10"
         />
         <span className="text-white font-bold text-lg sm:text-xl" style={{ fontFamily: 'Source Code Pro, monospace' }}>
-          24/7 AI Therapist
+          Your Best Friend Anytime
         </span>
       </div>
       <div className="relative">

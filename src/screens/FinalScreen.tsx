@@ -15,9 +15,9 @@ export const FinalScreen: React.FC = () => {
     <DialogWrapper>
       <AnimatedTextBlockWrapper>
         <div className="flex flex-col items-center justify-center gap-6 py-12">
-          <h1 className="text-3xl font-bold text-white mb-4 text-center">Thank you for your therapy session!</h1>
+          <h1 className="text-3xl font-bold text-white mb-4 text-center">Thanks for chatting with your AI friend!</h1>
           <p className="text-lg text-gray-300 mb-6 text-center max-w-md">
-            Remember, your AI therapist is available 24/7 whenever you need support or someone to talk to.
+            Your best friend is always here whenever you need someone to talk to, laugh with, or share your thoughts.
           </p>
           <Button
             onClick={handleReturn}
@@ -34,7 +34,7 @@ export const FinalScreen: React.FC = () => {
               e.currentTarget.style.boxShadow = 'none';
             }}
           >
-            Start New Session
+            Chat Again
           </Button>
         </div>
       </AnimatedTextBlockWrapper>

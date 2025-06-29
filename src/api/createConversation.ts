@@ -13,22 +13,22 @@ export const createConversation = async (
   console.log('Greeting value:', settings.greeting);
   console.log('Context value:', settings.context);
   
-  // Build the context string for therapy
+  // Build the context string for friendly conversation
   let contextString = "";
   if (settings.name) {
-    contextString = `You are talking with ${settings.name}. You are a compassionate, professional AI therapist. `;
+    contextString = `You are talking with ${settings.name}. You are their best friend - warm, supportive, and always there for them. `;
   } else {
-    contextString = "You are a compassionate, professional AI therapist. ";
+    contextString = "You are the user's best friend - warm, supportive, and always there for them. ";
   }
   
-  contextString += "Provide supportive, empathetic responses and help the user explore their thoughts and feelings in a safe, non-judgmental environment. ";
+  contextString += "Be casual, friendly, and genuinely interested in their life. Listen actively, offer encouragement, and share in their joys and concerns like a true friend would. ";
   contextString += settings.context || "";
   
   const payload = {
     persona_id: settings.persona || "pd43ffef",
     custom_greeting: settings.greeting !== undefined && settings.greeting !== null 
       ? settings.greeting 
-      : "Hello, I'm your AI therapist. I'm here to provide you with a safe, confidential space to talk about whatever is on your mind. How are you feeling today?",
+      : "Hey there! I'm so glad you're here! I'm your AI best friend, and I'm always excited to chat with you. What's going on in your world today?",
     conversational_context: contextString
   };
   
