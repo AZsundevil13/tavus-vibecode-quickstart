@@ -2,6 +2,7 @@ import { useAtom } from "jotai";
 import { screenAtom } from "./store/screens";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
+import { SessionTracker } from "./components/SessionTracker";
 import {
   IntroLoading,
   Outage,
@@ -12,6 +13,7 @@ import {
   FinalScreen,
   Settings,
 } from "./screens";
+import { SessionReports } from "./screens/SessionReports";
 
 function App() {
   const [{ currentScreen }] = useAtom(screenAtom);
@@ -34,6 +36,8 @@ function App() {
         return <Conversation />;
       case "finalScreen":
         return <FinalScreen />;
+      case "sessionReports":
+        return <SessionReports />;
       default:
         return <IntroLoading />;
     }
@@ -44,6 +48,7 @@ function App() {
       {currentScreen !== "introLoading" && <Header />}
       {renderScreen()}
       {currentScreen !== "introLoading" && <Footer />}
+      {(currentScreen === "conversation" || currentScreen === "instructions") && <SessionTracker />}
     </main>
   );
 }

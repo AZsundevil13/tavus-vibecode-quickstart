@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Button } from "./ui/button";
-import { Settings, Check } from "lucide-react";
+import { Settings, Check, BarChart3 } from "lucide-react";
 import { useAtom } from "jotai";
 import { screenAtom } from "@/store/screens";
 import { conversationAtom } from "@/store/conversation";
@@ -17,27 +17,49 @@ export const Header = memo(() => {
     }
   };
 
+  const handleReports = () => {
+    if (!conversation) {
+      setScreenState({ currentScreen: "sessionReports" });
+    }
+  };
+
   return (
     <header className="flex w-full items-start justify-between" style={{ fontFamily: 'Inter, sans-serif' }}>
       <div className="flex items-center gap-2">
         <span className="text-white font-bold text-xl sm:text-2xl" style={{ fontFamily: 'Source Code Pro, monospace' }}>
           Runsphere
         </span>
+        <span className="text-xs text-gray-400 bg-blue-600/20 px-2 py-1 rounded">
+          BCBA Platform
+        </span>
       </div>
-      <div className="relative">
-        {settingsSaved && (
-          <div className="absolute -top-2 -right-2 z-20 rounded-full bg-green-500 p-1 animate-fade-in">
-            <Check className="size-3" />
-          </div>
-        )}
+      <div className="flex items-center gap-2">
         <Button
           variant="outline"
           size="icon"
-          onClick={handleSettings}
+          onClick={handleReports}
           className="relative size-10 sm:size-14 border-0 bg-transparent hover:bg-zinc-800"
+          title="Session Reports"
         >
-          <Settings className="size-4 sm:size-6" />
+          <BarChart3 className="size-4 sm:size-6" />
         </Button>
+        
+        <div className="relative">
+          {settingsSaved && (
+            <div className="absolute -top-2 -right-2 z-20 rounded-full bg-green-500 p-1 animate-fade-in">
+              <Check className="size-3" />
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleSettings}
+            className="relative size-10 sm:size-14 border-0 bg-transparent hover:bg-zinc-800"
+            title="Settings"
+          >
+            <Settings className="size-4 sm:size-6" />
+          </Button>
+        </div>
       </div>
     </header>
   );
