@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAtom } from "jotai";
 import { screenAtom } from "@/store/screens";
 import { apiTokenAtom } from "@/store/tokens";
 import { conversationAtom } from "@/store/conversation";
 import { motion } from "framer-motion";
-import { Heart, Shield, Clock, Users, Brain, Sparkles, AlertTriangle } from "lucide-react";
+import { Heart, Shield, Clock, Users, Brain, Sparkles, AlertTriangle, CheckCircle } from "lucide-react";
 import { ConversationStatus } from "@/types";
 
 export const Intro: React.FC = () => {
@@ -13,6 +13,18 @@ export const Intro: React.FC = () => {
   const [, setConversation] = useAtom(conversationAtom);
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any>({});
+
+  // Debug information
+  useEffect(() => {
+    setDebugInfo({
+      hasToken: !!token,
+      environment: import.meta.env.MODE,
+      apiKey: import.meta.env.VITE_TAVUS_API_KEY ? 'Set' : 'Not set',
+      replicaId: import.meta.env.VITE_TAVUS_REPLICA_ID ? 'Set' : 'Not set',
+      timestamp: new Date().toISOString()
+    });
+  }, [token]);
 
   // Set the default API key only if no token exists
   React.useEffect(() => {
@@ -20,6 +32,7 @@ export const Intro: React.FC = () => {
       const defaultToken = "a585d2b465da47238e21335438dd4d1c";
       setToken(defaultToken);
       localStorage.setItem('tavus-token', defaultToken);
+      console.log('Default API token set');
     }
   }, [token, setToken]);
 
@@ -29,6 +42,7 @@ export const Intro: React.FC = () => {
     
     try {
       console.log("Connecting to your active therapy session...");
+      console.log("Debug info:", debugInfo);
       
       // Use your existing active conversation
       const conversationData = {
@@ -122,6 +136,14 @@ export const Intro: React.FC = () => {
           <h2 className="text-xl font-bold text-red-400 mb-4">Session Creation Failed</h2>
           <p className="text-white mb-6 text-sm">{error}</p>
           
+          {/* Debug Information */}
+          <div className="bg-gray-800/50 rounded-lg p-3 mb-4 text-left">
+            <p className="text-gray-300 text-xs mb-2">Debug Info:</p>
+            <pre className="text-gray-400 text-xs overflow-auto">
+              {JSON.stringify(debugInfo, null, 2)}
+            </pre>
+          </div>
+          
           <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
             <button
               onClick={() => {
@@ -178,6 +200,30 @@ export const Intro: React.FC = () => {
   return (
     <div className="min-h-screen bg-black overflow-y-auto">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Debug Panel (only show in development or if there are issues) */}
+        {(import.meta.env.MODE === 'development' || !token) && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-yellow-500/10 backdrop-blur-sm rounded-2xl p-4 border border-yellow-400/30 mb-8"
+          >
+            <h3 className="text-yellow-200 font-semibold mb-2 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              System Status
+            </h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <CheckCircle className={`w-4 h-4 ${debugInfo.hasToken ? 'text-green-400' : 'text-red-400'}`} />
+                <span className="text-white">API Token: {debugInfo.hasToken ? 'Ready' : 'Missing'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <span className="text-white">Environment: {debugInfo.environment}</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Hero Section */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -304,6 +350,16 @@ export const Intro: React.FC = () => {
               valuable support, it's not a replacement for professional mental health treatment when needed.
             </p>
           </div>
+        </motion.div>
+
+        {/* Footer with deployment info */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 2 }}
+          className="text-center mt-8 text-white/40 text-xs"
+        >
+          <p>Deployed on Netlify • Build: {new Date().toISOString()}</p>
         </motion.div>
       </div>
     </div>
