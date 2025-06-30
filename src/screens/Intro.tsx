@@ -3,13 +3,12 @@ import { useAtom } from "jotai";
 import { screenAtom } from "@/store/screens";
 import { apiTokenAtom } from "@/store/tokens";
 import { motion } from "framer-motion";
-import { Heart, Shield, Clock, Users, Brain, Sparkles, Zap } from "lucide-react";
+import { Heart, Shield, Clock, Users, Brain, Sparkles } from "lucide-react";
 
 export const Intro: React.FC = () => {
   const [, setScreenState] = useAtom(screenAtom);
   const [token, setToken] = useAtom(apiTokenAtom);
   const [isStarting, setIsStarting] = useState(false);
-  const [useExistingSession, setUseExistingSession] = useState(true);
 
   // Set the default API key only if no token exists
   React.useEffect(() => {
@@ -23,7 +22,6 @@ export const Intro: React.FC = () => {
   const handleStartChat = async () => {
     setIsStarting(true);
     console.log("Starting therapy session with token:", token);
-    console.log("Using existing persistent session:", useExistingSession);
     
     // Add a brief delay for better UX
     setTimeout(() => {
@@ -43,9 +41,9 @@ export const Intro: React.FC = () => {
       description: "Completely confidential space with professional therapeutic boundaries"
     },
     {
-      icon: Zap,
+      icon: Clock,
       title: "Always Available",
-      description: "Persistent AI therapist ready 24/7 - no waiting, no appointments needed"
+      description: "24/7 AI therapist ready when you need support - no appointments needed"
     },
     {
       icon: Brain,
@@ -91,13 +89,10 @@ export const Intro: React.FC = () => {
             <Heart className="w-8 h-8 text-white" />
           </motion.div>
           <h2 className="text-2xl font-bold text-white mb-4">
-            {useExistingSession ? 'Connecting to Your AI Therapist' : 'Creating Your Session'}
+            Connecting to Your AI Therapist
           </h2>
           <p className="text-white/80">
-            {useExistingSession 
-              ? 'Joining the always-available therapeutic space...'
-              : 'Creating a safe, therapeutic space just for you...'
-            }
+            Creating your personal therapeutic space...
           </p>
         </motion.div>
       </div>
@@ -125,57 +120,17 @@ export const Intro: React.FC = () => {
             </motion.div>
             
             <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-              Always-Available
+              Professional
               <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent block">
                 AI Therapy
               </span>
             </h1>
             
             <p className="text-xl text-white/80 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Connect instantly with your persistent AI therapist - no appointments, no waiting. 
-              Professional therapeutic support available 24/7 with evidence-based care and 
-              trauma-informed approaches.
+              Connect instantly with your personal AI therapist. Professional therapeutic support 
+              available 24/7 with evidence-based care and trauma-informed approaches. 
+              Each conversation is private and tailored to your unique needs.
             </p>
-
-            {/* Session Type Selection */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-white/20">
-              <h3 className="text-lg font-semibold text-white mb-4">Choose Your Session Type</h3>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button
-                  onClick={() => setUseExistingSession(true)}
-                  className={`px-6 py-3 rounded-xl border transition-all duration-300 ${
-                    useExistingSession 
-                      ? 'bg-blue-600 border-blue-500 text-white' 
-                      : 'bg-white/10 border-white/30 text-white/80 hover:bg-white/20'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Zap className="w-5 h-5" />
-                    <div className="text-left">
-                      <div className="font-semibold">Instant Connection</div>
-                      <div className="text-sm opacity-80">Join persistent AI therapist</div>
-                    </div>
-                  </div>
-                </button>
-                
-                <button
-                  onClick={() => setUseExistingSession(false)}
-                  className={`px-6 py-3 rounded-xl border transition-all duration-300 ${
-                    !useExistingSession 
-                      ? 'bg-purple-600 border-purple-500 text-white' 
-                      : 'bg-white/10 border-white/30 text-white/80 hover:bg-white/20'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Sparkles className="w-5 h-5" />
-                    <div className="text-left">
-                      <div className="font-semibold">New Session</div>
-                      <div className="text-sm opacity-80">Create fresh conversation</div>
-                    </div>
-                  </div>
-                </button>
-              </div>
-            </div>
 
             <div className="flex flex-wrap justify-center gap-3 mb-8">
               {specializations.map((spec, index) => (
@@ -197,7 +152,7 @@ export const Intro: React.FC = () => {
               onClick={handleStartChat}
               className="px-12 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white text-xl font-semibold rounded-2xl transition-all duration-300 shadow-2xl hover:shadow-purple-500/25"
             >
-              {useExistingSession ? 'Connect Instantly' : 'Begin Your Healing Journey'}
+              Start Your Session
             </motion.button>
           </div>
         </motion.div>
@@ -224,7 +179,7 @@ export const Intro: React.FC = () => {
           ))}
         </motion.div>
 
-        {/* Always Available Notice */}
+        {/* How It Works */}
         <motion.div 
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -232,28 +187,27 @@ export const Intro: React.FC = () => {
           className="bg-gradient-to-r from-green-500/20 to-blue-500/20 backdrop-blur-sm rounded-3xl p-8 border border-green-400/30 mb-16"
         >
           <div className="text-center">
-            <Zap className="w-12 h-12 text-green-400 mx-auto mb-4" />
-            <h2 className="text-3xl font-bold text-white mb-4">Always Here When You Need Support</h2>
+            <Clock className="w-12 h-12 text-green-400 mx-auto mb-4" />
+            <h2 className="text-3xl font-bold text-white mb-4">How It Works</h2>
             <p className="text-green-100/90 text-lg mb-6 max-w-3xl mx-auto">
-              Your AI therapist maintains a persistent presence, ready to provide immediate support 
-              without appointments or waiting. Whether it's 3 AM or during a lunch break, 
-              professional therapeutic care is just one click away.
+              Each user gets their own private conversation with your AI therapist. 
+              Simply click "Start Your Session" and you'll be connected instantly to begin your healing journey.
             </p>
             <div className="grid md:grid-cols-3 gap-4 text-sm">
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                <Clock className="w-6 h-6 text-green-300 mx-auto mb-2" />
-                <p className="text-green-200 font-semibold">24/7 Availability</p>
-                <p className="text-green-100/80">No scheduling needed</p>
+                <div className="w-8 h-8 bg-green-400 text-black rounded-full flex items-center justify-center mx-auto mb-2 font-bold">1</div>
+                <p className="text-green-200 font-semibold">Click Start Session</p>
+                <p className="text-green-100/80">One simple button to begin</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                <Heart className="w-6 h-6 text-green-300 mx-auto mb-2" />
-                <p className="text-green-200 font-semibold">Instant Connection</p>
-                <p className="text-green-100/80">Immediate therapeutic support</p>
+                <div className="w-8 h-8 bg-green-400 text-black rounded-full flex items-center justify-center mx-auto mb-2 font-bold">2</div>
+                <p className="text-green-200 font-semibold">Connect Instantly</p>
+                <p className="text-green-100/80">Your personal AI therapist joins</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                <Shield className="w-6 h-6 text-green-300 mx-auto mb-2" />
-                <p className="text-green-200 font-semibold">Consistent Care</p>
-                <p className="text-green-100/80">Same quality every session</p>
+                <div className="w-8 h-8 bg-green-400 text-black rounded-full flex items-center justify-center mx-auto mb-2 font-bold">3</div>
+                <p className="text-green-200 font-semibold">Begin Healing</p>
+                <p className="text-green-100/80">Start your therapeutic conversation</p>
               </div>
             </div>
           </div>
@@ -325,9 +279,9 @@ export const Intro: React.FC = () => {
             <Shield className="w-8 h-8 text-green-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-white mb-3">Your Privacy & Safety</h3>
             <p className="text-white/70 text-sm max-w-2xl mx-auto">
-              This AI therapy session follows professional therapeutic ethics and boundaries. 
-              Your conversations are private and confidential. While this provides valuable support, 
-              it's not a replacement for professional mental health treatment when needed.
+              Each therapy session is completely private and confidential. Your conversations are secure, 
+              and each user gets their own individual session with the AI therapist. While this provides 
+              valuable support, it's not a replacement for professional mental health treatment when needed.
             </p>
           </div>
         </motion.div>

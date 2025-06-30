@@ -11,9 +11,12 @@ interface EnvironmentConfig {
 }
 
 const getEnvironmentConfig = (): EnvironmentConfig => {
+  // Use the specific replica ID you provided
+  const defaultReplicaId = "r91c80eca351";
+  
   // Validate required environment variables
-  const tavusApiKey = import.meta.env.VITE_TAVUS_API_KEY;
-  const tavusReplicaId = import.meta.env.VITE_TAVUS_REPLICA_ID;
+  const tavusApiKey = import.meta.env.VITE_TAVUS_API_KEY || "a585d2b465da47238e21335438dd4d1c";
+  const tavusReplicaId = import.meta.env.VITE_TAVUS_REPLICA_ID || defaultReplicaId;
 
   if (!tavusApiKey) {
     throw new Error('VITE_TAVUS_API_KEY is required');
