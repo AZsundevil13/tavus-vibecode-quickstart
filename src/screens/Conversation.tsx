@@ -40,6 +40,7 @@ export const Conversation: React.FC = () => {
   const [connectionQuality, setConnectionQuality] = useState<'good' | 'fair' | 'poor'>('good');
   const [isTherapistSpeaking, setIsTherapistSpeaking] = useState(false);
   const [showHelpTips, setShowHelpTips] = useState(false);
+  const [hasEnabledMic, setHasEnabledMic] = useState(false);
 
   const daily = useDaily();
   const localSessionId = useLocalSessionId();
@@ -107,14 +108,20 @@ export const Conversation: React.FC = () => {
         await daily.join({
           url: conversationUrl,
           startVideoOff: false,
-          startAudioOff: true,
+          startAudioOff: false, // Start with audio ON
         });
         
         console.log("Successfully joined therapy session");
+        
+        // Ensure both video and audio are enabled
         daily.setLocalVideo(true);
-        daily.setLocalAudio(false);
+        daily.setLocalAudio(true);
+        
         setIsLoading(false);
         setError(null);
+        setHasEnabledMic(true);
+        
+        console.log("Audio and video enabled for therapy session");
       } catch (error) {
         console.error("Failed to join therapy session:", error);
         setError(`Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -127,14 +134,21 @@ export const Conversation: React.FC = () => {
     joinCall();
   }, [conversationUrl, daily, isJoiningCall]);
 
+  // Ensure microphone is enabled when AI therapist joins
   useEffect(() => {
-    if (remoteParticipantIds.length && !localAudio.isOff) return;
-    
-    if (remoteParticipantIds.length) {
-      console.log("AI therapist joined, enabling audio");
-      setTimeout(() => daily?.setLocalAudio(true), 2000);
+    if (remoteParticipantIds.length > 0 && daily && !hasEnabledMic) {
+      console.log("AI therapist joined, ensuring microphone is enabled");
+      
+      // Enable microphone immediately when therapist joins
+      daily.setLocalAudio(true);
+      setHasEnabledMic(true);
+      
+      // Show a brief notification that the session is ready
+      setTimeout(() => {
+        console.log("Session is ready for conversation");
+      }, 1000);
     }
-  }, [remoteParticipantIds, daily, localAudio.isOff]);
+  }, [remoteParticipantIds, daily, hasEnabledMic]);
 
   // Monitor audio levels for speaking indicator
   useEffect(() => {
@@ -153,7 +167,15 @@ export const Conversation: React.FC = () => {
   }, [daily, isCameraEnabled]);
 
   const toggleAudio = useCallback(() => {
-    daily?.setLocalAudio(!isMicEnabled);
+    const newAudioState = !isMicEnabled;
+    daily?.setLocalAudio(newAudioState);
+    
+    if (newAudioState) {
+      setHasEnabledMic(true);
+      console.log("Microphone enabled - you can now speak to the AI therapist");
+    } else {
+      console.log("Microphone disabled");
+    }
   }, [daily, isMicEnabled]);
 
   const leaveConversation = useCallback(() => {
@@ -182,6 +204,7 @@ export const Conversation: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setIsJoiningCall(false);
+    setHasEnabledMic(false);
   }, []);
 
   const formatTime = (seconds: number) => {
@@ -192,6 +215,7 @@ export const Conversation: React.FC = () => {
 
   const helpTips = [
     "Speak naturally - your AI therapist is trained to listen and respond with empathy",
+    "Make sure your microphone is enabled (green microphone icon) to start the conversation",
     "It's okay to take pauses - silence is part of the therapeutic process",
     "Share what feels comfortable - you control the pace and depth of conversation",
     "If you feel overwhelmed, let your therapist know - they can guide you through grounding exercises",
@@ -279,6 +303,11 @@ export const Conversation: React.FC = () => {
                     <span className="text-white text-sm font-medium">Session Active</span>
                   </div>
                   <div className="text-white/70 text-sm">{formatTime(sessionTime)}</div>
+                  {!isMicEnabled && (
+                    <div className="bg-red-500/80 backdrop-blur-sm rounded-lg px-2 py-1">
+                      <span className="text-red-100 text-xs font-medium">Mic Off</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -294,6 +323,24 @@ export const Conversation: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Microphone Reminder */}
+      {remoteParticipantIds.length > 0 && !isMicEnabled && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-20 left-1/2 transform -translate-x-1/2 z-30"
+        >
+          <div className="bg-orange-500/90 backdrop-blur-sm rounded-xl px-6 py-3 border border-orange-400/50">
+            <div className="flex items-center gap-3">
+              <MicOffIcon className="w-5 h-5 text-orange-100" />
+              <p className="text-orange-100 font-medium">
+                Enable your microphone to start talking with your AI therapist
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Help Tips Modal */}
       <AnimatePresence>
@@ -382,6 +429,11 @@ export const Conversation: React.FC = () => {
               <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1">
                 <span className="text-white text-xs font-medium">You</span>
               </div>
+              {isMicEnabled && (
+                <div className="absolute top-2 right-2 bg-green-500/80 backdrop-blur-sm rounded-lg px-2 py-1">
+                  <Volume2 className="w-3 h-3 text-green-100" />
+                </div>
+              )}
             </div>
           )}
           
@@ -396,7 +448,7 @@ export const Conversation: React.FC = () => {
               >
                 <Button
                   size="icon"
-                  className={`bg-black/60 border border-white/20 hover:bg-black/80 ${!isMicEnabled ? 'bg-red-600/80 hover:bg-red-700/80' : ''}`}
+                  className={`bg-black/60 border border-white/20 hover:bg-black/80 ${!isMicEnabled ? 'bg-red-600/80 hover:bg-red-700/80' : 'bg-green-600/80 hover:bg-green-700/80'}`}
                   onClick={toggleAudio}
                 >
                   {!isMicEnabled ? (
@@ -494,7 +546,7 @@ export const Conversation: React.FC = () => {
           <div className="flex justify-center gap-4 mt-4">
             <Button
               size="icon"
-              className={`bg-black/60 border border-white/20 hover:bg-black/80 h-12 w-12 ${!isMicEnabled ? 'bg-red-600/80 hover:bg-red-700/80' : ''}`}
+              className={`bg-black/60 border border-white/20 hover:bg-black/80 h-12 w-12 ${!isMicEnabled ? 'bg-red-600/80 hover:bg-red-700/80' : 'bg-green-600/80 hover:bg-green-700/80'}`}
               onClick={toggleAudio}
             >
               {!isMicEnabled ? (
