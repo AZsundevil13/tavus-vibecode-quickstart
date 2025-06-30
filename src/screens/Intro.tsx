@@ -3,12 +3,13 @@ import { useAtom } from "jotai";
 import { screenAtom } from "@/store/screens";
 import { apiTokenAtom } from "@/store/tokens";
 import { motion } from "framer-motion";
-import { Heart, Shield, Clock, Users, Brain, Sparkles } from "lucide-react";
+import { Heart, Shield, Clock, Users, Brain, Sparkles, Zap } from "lucide-react";
 
 export const Intro: React.FC = () => {
   const [, setScreenState] = useAtom(screenAtom);
   const [token, setToken] = useAtom(apiTokenAtom);
   const [isStarting, setIsStarting] = useState(false);
+  const [useExistingSession, setUseExistingSession] = useState(true);
 
   // Set the default API key only if no token exists
   React.useEffect(() => {
@@ -21,7 +22,8 @@ export const Intro: React.FC = () => {
 
   const handleStartChat = async () => {
     setIsStarting(true);
-    console.log("Starting comprehensive therapy session with token:", token);
+    console.log("Starting therapy session with token:", token);
+    console.log("Using existing persistent session:", useExistingSession);
     
     // Add a brief delay for better UX
     setTimeout(() => {
@@ -41,9 +43,9 @@ export const Intro: React.FC = () => {
       description: "Completely confidential space with professional therapeutic boundaries"
     },
     {
-      icon: Clock,
-      title: "Available 24/7",
-      description: "Crisis support and therapeutic guidance whenever you need it most"
+      icon: Zap,
+      title: "Always Available",
+      description: "Persistent AI therapist ready 24/7 - no waiting, no appointments needed"
     },
     {
       icon: Brain,
@@ -88,9 +90,14 @@ export const Intro: React.FC = () => {
           >
             <Heart className="w-8 h-8 text-white" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-white mb-4">Preparing Your Session</h2>
+          <h2 className="text-2xl font-bold text-white mb-4">
+            {useExistingSession ? 'Connecting to Your AI Therapist' : 'Creating Your Session'}
+          </h2>
           <p className="text-white/80">
-            Creating a safe, therapeutic space just for you...
+            {useExistingSession 
+              ? 'Joining the always-available therapeutic space...'
+              : 'Creating a safe, therapeutic space just for you...'
+            }
           </p>
         </motion.div>
       </div>
@@ -118,16 +125,57 @@ export const Intro: React.FC = () => {
             </motion.div>
             
             <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-              Professional AI
+              Always-Available
               <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent block">
-                Therapy Sessions
+                AI Therapy
               </span>
             </h1>
             
             <p className="text-xl text-white/80 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Experience comprehensive, evidence-based therapeutic support with an AI therapist 
-              trained in trauma-informed care, neurodivergence support, and culturally sensitive healing approaches.
+              Connect instantly with your persistent AI therapist - no appointments, no waiting. 
+              Professional therapeutic support available 24/7 with evidence-based care and 
+              trauma-informed approaches.
             </p>
+
+            {/* Session Type Selection */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-white/20">
+              <h3 className="text-lg font-semibold text-white mb-4">Choose Your Session Type</h3>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button
+                  onClick={() => setUseExistingSession(true)}
+                  className={`px-6 py-3 rounded-xl border transition-all duration-300 ${
+                    useExistingSession 
+                      ? 'bg-blue-600 border-blue-500 text-white' 
+                      : 'bg-white/10 border-white/30 text-white/80 hover:bg-white/20'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Zap className="w-5 h-5" />
+                    <div className="text-left">
+                      <div className="font-semibold">Instant Connection</div>
+                      <div className="text-sm opacity-80">Join persistent AI therapist</div>
+                    </div>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => setUseExistingSession(false)}
+                  className={`px-6 py-3 rounded-xl border transition-all duration-300 ${
+                    !useExistingSession 
+                      ? 'bg-purple-600 border-purple-500 text-white' 
+                      : 'bg-white/10 border-white/30 text-white/80 hover:bg-white/20'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="w-5 h-5" />
+                    <div className="text-left">
+                      <div className="font-semibold">New Session</div>
+                      <div className="text-sm opacity-80">Create fresh conversation</div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
 
             <div className="flex flex-wrap justify-center gap-3 mb-8">
               {specializations.map((spec, index) => (
@@ -149,7 +197,7 @@ export const Intro: React.FC = () => {
               onClick={handleStartChat}
               className="px-12 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white text-xl font-semibold rounded-2xl transition-all duration-300 shadow-2xl hover:shadow-purple-500/25"
             >
-              Begin Your Healing Journey
+              {useExistingSession ? 'Connect Instantly' : 'Begin Your Healing Journey'}
             </motion.button>
           </div>
         </motion.div>
@@ -174,6 +222,41 @@ export const Intro: React.FC = () => {
               <p className="text-white/70 leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
+        </motion.div>
+
+        {/* Always Available Notice */}
+        <motion.div 
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.6 }}
+          className="bg-gradient-to-r from-green-500/20 to-blue-500/20 backdrop-blur-sm rounded-3xl p-8 border border-green-400/30 mb-16"
+        >
+          <div className="text-center">
+            <Zap className="w-12 h-12 text-green-400 mx-auto mb-4" />
+            <h2 className="text-3xl font-bold text-white mb-4">Always Here When You Need Support</h2>
+            <p className="text-green-100/90 text-lg mb-6 max-w-3xl mx-auto">
+              Your AI therapist maintains a persistent presence, ready to provide immediate support 
+              without appointments or waiting. Whether it's 3 AM or during a lunch break, 
+              professional therapeutic care is just one click away.
+            </p>
+            <div className="grid md:grid-cols-3 gap-4 text-sm">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                <Clock className="w-6 h-6 text-green-300 mx-auto mb-2" />
+                <p className="text-green-200 font-semibold">24/7 Availability</p>
+                <p className="text-green-100/80">No scheduling needed</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                <Heart className="w-6 h-6 text-green-300 mx-auto mb-2" />
+                <p className="text-green-200 font-semibold">Instant Connection</p>
+                <p className="text-green-100/80">Immediate therapeutic support</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                <Shield className="w-6 h-6 text-green-300 mx-auto mb-2" />
+                <p className="text-green-200 font-semibold">Consistent Care</p>
+                <p className="text-green-100/80">Same quality every session</p>
+              </div>
+            </div>
+          </div>
         </motion.div>
 
         {/* Therapeutic Approaches */}
