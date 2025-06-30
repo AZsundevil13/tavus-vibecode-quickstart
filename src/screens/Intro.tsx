@@ -23,44 +23,24 @@ export const Intro: React.FC = () => {
     }
   }, [token, setToken]);
 
-  const createConversation = async () => {
-    const response = await fetch("https://tavusapi.com/v2/conversations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": token!,
-      },
-      body: JSON.stringify({
-        replica_id: "r91c80eca351",
-        conversation_name: "AI Therapy Session",
-        conversational_context: "You are a compassionate AI therapist. Greet the user warmly and ask how they're feeling today. Listen actively and provide supportive responses. Ask follow-up questions to understand their concerns better.",
-        custom_greeting: "Hello! I'm your AI therapist. I'm here to listen and support you. How are you feeling today?"
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to create conversation: ${response.status} - ${errorText}`);
-    }
-
-    return response.json();
-  };
-
   const handleStartChat = async () => {
     setIsStarting(true);
     setError(null);
     
     try {
-      console.log("Creating therapy session...");
+      console.log("Connecting to your active therapy session...");
       
-      if (!token) {
-        throw new Error("API token is required");
-      }
+      // Use your existing active conversation
+      const conversationData = {
+        conversation_id: "cd2ea0b51b8cb47b",
+        conversation_url: "https://tavus.daily.co/cd2ea0b51b8cb47b",
+        status: "active",
+        persona_id: "p13e9a420a8e",
+        replica_id: "r91c80eca351",
+        created_at: "June 30, 1:52 pm"
+      };
       
-      // Create conversation using simple API call
-      const conversationData = await createConversation();
-      
-      console.log("Created conversation:", conversationData);
+      console.log("Using existing conversation:", conversationData);
       
       // Store the conversation data
       setConversation({
@@ -68,13 +48,13 @@ export const Intro: React.FC = () => {
         conversation_name: "AI Therapy Session",
         status: ConversationStatus.ACTIVE,
         conversation_url: conversationData.conversation_url,
-        created_at: new Date().toLocaleString(),
+        created_at: conversationData.created_at,
       });
       
-      // Navigate to conversation screen
+      // Navigate to conversation screen immediately
       setTimeout(() => {
         setScreenState({ currentScreen: "conversation" });
-      }, 1000);
+      }, 500);
       
     } catch (error) {
       console.error("Failed to start therapy session:", error);
@@ -180,14 +160,14 @@ export const Intro: React.FC = () => {
             <Heart className="w-8 h-8 text-white" />
           </motion.div>
           <h2 className="text-2xl font-bold text-white mb-4">
-            Creating Your AI Therapy Session
+            Connecting to Your Active Session
           </h2>
           <p className="text-white/80">
-            Setting up your personalized therapeutic session...
+            Joining your existing conversation...
           </p>
           <div className="bg-green-500/20 backdrop-blur-sm rounded-xl p-4 border border-green-400/30 mt-4">
             <p className="text-green-200 text-sm">
-              ✨ Creating secure conversation room
+              ✨ Session ID: cd2ea0b51b8cb47b
             </p>
           </div>
         </motion.div>
@@ -216,25 +196,24 @@ export const Intro: React.FC = () => {
             </motion.div>
             
             <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-              Professional
+              Your Active
               <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent block">
-                AI Therapy
+                AI Therapy Session
               </span>
             </h1>
             
             <p className="text-xl text-white/80 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Connect instantly with your personal AI therapist. Professional therapeutic support 
-              available 24/7 with evidence-based care and trauma-informed approaches. 
-              Each conversation is private and tailored to your unique needs.
+              Your AI therapist is ready and waiting! Connect to your active session 
+              to continue your therapeutic conversation. Your session is secure and private.
             </p>
 
             <div className="bg-green-500/20 backdrop-blur-sm rounded-2xl p-4 mb-8 border border-green-400/30">
               <div className="flex items-center justify-center gap-2 mb-2">
-                <Heart className="w-5 h-5 text-green-300" />
-                <p className="text-green-200 font-semibold">Ready to Connect</p>
+                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                <p className="text-green-200 font-semibold">Session Active & Ready</p>
               </div>
               <p className="text-green-100/80 text-sm">
-                Your AI therapist is available now - click below to start your session
+                Session ID: cd2ea0b51b8cb47b • Created: June 30, 1:52 pm
               </p>
             </div>
 
@@ -257,9 +236,9 @@ export const Intro: React.FC = () => {
               whileTap={{ scale: 0.95 }}
               onClick={handleStartChat}
               disabled={isStarting}
-              className="px-12 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white text-xl font-semibold rounded-2xl transition-all duration-300 shadow-2xl hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-12 py-4 bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 hover:from-green-700 hover:via-blue-700 hover:to-purple-700 text-white text-xl font-semibold rounded-2xl transition-all duration-300 shadow-2xl hover:shadow-green-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Start Your Session
+              Join Your Session
             </motion.button>
           </div>
         </motion.div>
@@ -320,7 +299,7 @@ export const Intro: React.FC = () => {
             <Shield className="w-8 h-8 text-green-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-white mb-3">Your Privacy & Safety</h3>
             <p className="text-white/70 text-sm max-w-2xl mx-auto">
-              Each therapy session is completely private and confidential. Your conversations are secure, 
+              Your active therapy session is completely private and confidential. Your conversations are secure, 
               and you connect directly to your personal AI therapist. While this provides 
               valuable support, it's not a replacement for professional mental health treatment when needed.
             </p>
