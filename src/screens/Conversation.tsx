@@ -13,6 +13,7 @@ import { useAtom, useAtomValue } from "jotai";
 import { screenAtom } from "@/store/screens";
 import { Button } from "@/components/ui/button";
 import { endConversation } from "@/api/endConversation";
+import { createConversation } from "@/api/createConversation";
 import {
   MicIcon,
   MicOffIcon,
@@ -49,10 +50,6 @@ export const Conversation: React.FC = () => {
   const isMicEnabled = !localAudio.isOff;
   const remoteParticipantIds = useParticipantIds({ filter: "remote" });
 
-  // Use the specific conversation URL directly if no conversation exists
-  const conversationUrl = "https://tavus.daily.co/ce5f6050ae52d4b4";
-  const conversationId = "ce5f6050ae52d4b4";
-
   // Session timer
   useEffect(() => {
     const timer = setInterval(() => {
@@ -81,36 +78,59 @@ export const Conversation: React.FC = () => {
     };
   }, [showControls]);
 
-  // Set up the conversation object with the provided details if none exists
+  // Create conversation if none exists
   useEffect(() => {
-    if (!conversation) {
-      const staticConversation = {
-        conversation_id: conversationId,
-        conversation_name: "Therapeutic Session",
-        status: ConversationStatus.ACTIVE,
-        conversation_url: conversationUrl,
-        created_at: new Date().toLocaleString(),
-      };
-      setConversation(staticConversation);
-    }
-  }, [conversation, setConversation]);
+    const initializeConversation = async () => {
+      if (conversation || !token) return;
 
+      try {
+        console.log('Creating new therapy conversation');
+        setIsLoading(true);
+        setError(null);
+        
+        const newConversation = await createConversation(token);
+        console.log('Conversation created successfully', newConversation);
+        
+        setConversation(newConversation);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Failed to create conversation', { error });
+        
+        // Provide user-friendly error messages
+        let userErrorMessage = errorMessage;
+        if (errorMessage.includes('API token')) {
+          userErrorMessage = 'Authentication failed. Please check your API configuration.';
+        } else if (errorMessage.includes('Rate limit')) {
+          userErrorMessage = 'Too many requests. Please wait a moment and try again.';
+        } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+          userErrorMessage = 'Network connection issue. Please check your internet and try again.';
+        } else {
+          userErrorMessage = 'Unable to create therapy session. Please try again.';
+        }
+        
+        setError(userErrorMessage);
+        setIsLoading(false);
+      }
+    };
+
+    initializeConversation();
+  }, [conversation, token, setConversation]);
+
+  // Join the conversation once it's created
   useEffect(() => {
-    const urlToUse = conversation?.conversation_url || conversationUrl;
-    
-    if (!urlToUse || !daily || isJoiningCall) return;
+    if (!conversation?.conversation_url || !daily || isJoiningCall) return;
 
     const joinCall = async () => {
       setIsJoiningCall(true);
       
       try {
         console.log('Joining therapy session', { 
-          conversationId: conversation?.conversation_id || conversationId,
-          url: urlToUse 
+          conversationId: conversation.conversation_id,
+          url: conversation.conversation_url 
         });
         
         await daily.join({
-          url: urlToUse,
+          url: conversation.conversation_url,
           startVideoOff: false,
           startAudioOff: true,
         });
@@ -123,7 +143,7 @@ export const Conversation: React.FC = () => {
         
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error('Failed to join therapy session', { error, conversationId: conversation?.conversation_id || conversationId });
+        console.error('Failed to join therapy session', { error, conversationId: conversation.conversation_id });
         
         // Provide user-friendly error messages
         let userErrorMessage = errorMessage;
@@ -178,15 +198,15 @@ export const Conversation: React.FC = () => {
     const sessionDuration = Math.floor((Date.now() - sessionStartTime) / 1000);
     
     console.log('Leaving conversation', { 
-      conversationId: conversation?.conversation_id || conversationId,
+      conversationId: conversation?.conversation_id,
       sessionDuration 
     });
     
     daily?.leave();
     daily?.destroy();
     
-    if (token && (conversation?.conversation_id || conversationId)) {
-      endConversation(token, conversation?.conversation_id || conversationId).catch(error => {
+    if (token && conversation?.conversation_id) {
+      endConversation(token, conversation.conversation_id).catch(error => {
         console.error('Failed to end conversation via API', error);
       });
     }
@@ -200,7 +220,9 @@ export const Conversation: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setIsJoiningCall(false);
-  }, []);
+    // Reset conversation to trigger recreation
+    setConversation(null);
+  }, [setConversation]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -266,7 +288,9 @@ export const Conversation: React.FC = () => {
           </motion.div>
           <h2 className="text-2xl font-bold text-white mb-4">Preparing Your Session</h2>
           <p className="text-white/80 mb-4">
-            {isJoiningCall ? 'Connecting to your AI therapist...' : 'Creating a safe therapeutic space...'}
+            {!conversation ? 'Creating your therapy session...' : 
+             isJoiningCall ? 'Connecting to your AI therapist...' : 
+             'Creating a safe therapeutic space...'}
           </p>
           <div className="bg-blue-500/20 backdrop-blur-sm rounded-xl p-4 border border-blue-400/30">
             <p className="text-blue-200 text-sm">
