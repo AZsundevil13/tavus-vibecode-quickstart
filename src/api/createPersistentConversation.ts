@@ -13,7 +13,6 @@ export interface PersistentConversationConfig {
     max_call_duration?: number;
     participant_left_timeout?: number;
     enable_recording?: boolean;
-    participant_ai_enabled?: boolean;
     enable_transcription?: boolean;
   };
 }
@@ -108,7 +107,6 @@ Remember: You are here to provide genuine therapeutic support. Listen actively, 
       max_call_duration: 3600, // 1 hour max per session
       participant_left_timeout: 300, // 5 minutes before ending empty session
       enable_recording: false, // Never record for privacy
-      participant_ai_enabled: true, // Enable AI participant features
       enable_transcription: false, // Disable transcription for privacy
     }
   };
