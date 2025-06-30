@@ -5,7 +5,7 @@ export const createConversation = async (
 ): Promise<IConversation> => {
   
   const payload = {
-    replica_id: "r91c80eca351",
+    replica_id: "r91c80eca351", // Using your provided replica ID
     conversation_name: "Therapeutic Session",
     conversational_context: `COMPREHENSIVE THERAPEUTIC AI CONTEXT
 
