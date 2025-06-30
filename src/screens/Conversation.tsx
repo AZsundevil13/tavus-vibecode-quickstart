@@ -22,7 +22,9 @@ import {
   Volume2,
   HelpCircle,
   AlertTriangle,
-  MessageCircle
+  MessageCircle,
+  CheckCircle,
+  Clock
 } from "lucide-react";
 import { apiTokenAtom } from "@/store/tokens";
 import { motion, AnimatePresence } from "framer-motion";
@@ -43,6 +45,8 @@ export const Conversation: React.FC = () => {
   const [therapistJoined, setTherapistJoined] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [connectionStatus, setConnectionStatus] = useState('initializing');
+  const [debugInfo, setDebugInfo] = useState<any>({});
 
   const daily = useDaily();
   const localSessionId = useLocalSessionId();
@@ -55,6 +59,20 @@ export const Conversation: React.FC = () => {
   // Get conversation URL and ID from the conversation atom
   const conversationUrl = conversation?.conversation_url;
   const conversationId = conversation?.conversation_id;
+
+  // Update debug info
+  useEffect(() => {
+    setDebugInfo({
+      conversationUrl,
+      conversationId,
+      hasDaily: !!daily,
+      dailyState: daily?.meetingState(),
+      localSessionId,
+      remoteParticipants: remoteParticipantIds.length,
+      connectionStatus,
+      timestamp: new Date().toISOString()
+    });
+  }, [conversationUrl, conversationId, daily, localSessionId, remoteParticipantIds, connectionStatus]);
 
   // Session timer
   useEffect(() => {
@@ -87,23 +105,30 @@ export const Conversation: React.FC = () => {
   // Join the conversation when URL is available
   useEffect(() => {
     if (!conversationUrl || !daily || isJoiningCall || !conversation) {
+      console.log('Waiting for conversation data...', { conversationUrl: !!conversationUrl, daily: !!daily, isJoiningCall, conversation: !!conversation });
       return;
     }
 
     const joinCall = async () => {
       setIsJoiningCall(true);
       setError(null);
+      setConnectionStatus('connecting');
       
       try {
-        console.log("Joining AI therapy session with URL:", conversationUrl);
+        console.log("🔗 Joining AI therapy session with URL:", conversationUrl);
+        console.log("📊 Debug info:", debugInfo);
         
         // Destroy any existing call first
         if (daily.meetingState() !== 'left-meeting') {
+          console.log("🔄 Leaving existing meeting...");
           await daily.leave();
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
         
+        setConnectionStatus('joining');
+        
         // Join the call with optimal settings for AI interaction
+        console.log("🚀 Attempting to join call...");
         const joinResult = await daily.join({
           url: conversationUrl,
           startVideoOff: false,
@@ -111,8 +136,10 @@ export const Conversation: React.FC = () => {
           userName: "Therapy Client",
         });
         
-        console.log("Join result:", joinResult);
-        console.log("Successfully joined AI therapy session");
+        console.log("✅ Join result:", joinResult);
+        console.log("🎉 Successfully joined AI therapy session");
+        
+        setConnectionStatus('connected');
         
         // Wait a moment for connection to stabilize
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -125,25 +152,28 @@ export const Conversation: React.FC = () => {
         setIsLoading(false);
         setError(null);
         setRetryCount(0);
+        setConnectionStatus('ready');
         
-        console.log("Audio and video enabled - ready for AI therapist interaction");
+        console.log("🎤 Audio and video enabled - ready for AI therapist interaction");
         
       } catch (error) {
-        console.error("Failed to join AI therapy session:", error);
+        console.error("❌ Failed to join AI therapy session:", error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown connection error';
+        setConnectionStatus('error');
         
         // Retry logic for connection failures
         if (retryCount < 3) {
-          console.log(`Retrying connection (attempt ${retryCount + 1}/3)...`);
+          console.log(`🔄 Retrying connection (attempt ${retryCount + 1}/3)...`);
           setRetryCount(prev => prev + 1);
           setIsJoiningCall(false);
+          setConnectionStatus('retrying');
           
           // Wait before retry
           setTimeout(() => {
             if (conversationUrl && daily) {
               joinCall();
             }
-          }, 2000);
+          }, 3000);
           return;
         }
         
@@ -162,26 +192,29 @@ export const Conversation: React.FC = () => {
   // Monitor when AI therapist joins and becomes active
   useEffect(() => {
     if (remoteParticipantIds.length > 0 && !therapistJoined) {
-      console.log("AI therapist has joined the session!");
+      console.log("🤖 AI therapist has joined the session!");
       setTherapistJoined(true);
+      setConnectionStatus('therapist_joined');
       
       // Ensure microphone is enabled when therapist joins
       if (daily && !hasEnabledMic) {
         daily.setLocalAudio(true);
         setHasEnabledMic(true);
-        console.log("Microphone enabled for AI therapist interaction");
+        console.log("🎤 Microphone enabled for AI therapist interaction");
       }
       
       // Mark session as ready
       setTimeout(() => {
         setSessionReady(true);
-        console.log("Session is fully ready - AI therapist should start speaking");
+        setConnectionStatus('session_active');
+        console.log("✨ Session is fully ready - AI therapist should start speaking");
       }, 2000);
       
     } else if (remoteParticipantIds.length === 0 && therapistJoined) {
-      console.log("AI therapist has left the session");
+      console.log("👋 AI therapist has left the session");
       setTherapistJoined(false);
       setSessionReady(false);
+      setConnectionStatus('therapist_left');
     }
   }, [remoteParticipantIds, therapistJoined, daily, hasEnabledMic]);
 
@@ -201,7 +234,7 @@ export const Conversation: React.FC = () => {
     if (daily) {
       const newVideoState = !isCameraEnabled;
       daily.setLocalVideo(newVideoState);
-      console.log(`Camera ${newVideoState ? 'enabled' : 'disabled'}`);
+      console.log(`📹 Camera ${newVideoState ? 'enabled' : 'disabled'}`);
     }
   }, [daily, isCameraEnabled]);
 
@@ -212,9 +245,9 @@ export const Conversation: React.FC = () => {
       setHasEnabledMic(newAudioState);
       
       if (newAudioState) {
-        console.log("Microphone enabled - AI therapist can now hear you");
+        console.log("🎤 Microphone enabled - AI therapist can now hear you");
       } else {
-        console.log("Microphone disabled - AI therapist cannot hear you");
+        console.log("🔇 Microphone disabled - AI therapist cannot hear you");
       }
     }
   }, [daily, isMicEnabled]);
@@ -241,7 +274,7 @@ export const Conversation: React.FC = () => {
   const leaveConversation = useCallback(async () => {
     const sessionDuration = Math.floor((Date.now() - sessionStartTime) / 1000);
     
-    console.log('Leaving AI therapy conversation', { 
+    console.log('👋 Leaving AI therapy conversation', { 
       conversationId: conversationId,
       sessionDuration,
     });
@@ -264,7 +297,7 @@ export const Conversation: React.FC = () => {
   }, [daily, setConversation, setScreenState, sessionStartTime, conversationId, token]);
 
   const retryConnection = useCallback(() => {
-    console.log('Retrying AI therapy connection');
+    console.log('🔄 Retrying AI therapy connection');
     setIsLoading(true);
     setError(null);
     setIsJoiningCall(false);
@@ -272,6 +305,7 @@ export const Conversation: React.FC = () => {
     setTherapistJoined(false);
     setSessionReady(false);
     setRetryCount(0);
+    setConnectionStatus('retrying');
   }, []);
 
   const formatTime = (seconds: number) => {
@@ -293,7 +327,7 @@ export const Conversation: React.FC = () => {
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (isLoading && !error) {
-        console.log("Session connection taking longer than expected");
+        console.log("⏰ Session connection taking longer than expected");
         setError("Connection is taking longer than expected. Please try again.");
         setIsLoading(false);
       }
@@ -334,13 +368,21 @@ export const Conversation: React.FC = () => {
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 border border-white/20 text-center max-w-md w-full"
+          className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 border border-white/20 text-center max-w-lg w-full"
         >
           <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-500/20 flex items-center justify-center">
             <AlertTriangle className="w-8 h-8 text-red-400" />
           </div>
           <h2 className="text-xl font-bold text-red-400 mb-4">Connection Issue</h2>
           <p className="text-white mb-6 text-sm">{error}</p>
+          
+          {/* Debug Information */}
+          <div className="bg-gray-800/50 rounded-lg p-3 mb-6 text-left">
+            <p className="text-gray-300 text-xs mb-2">Debug Info:</p>
+            <pre className="text-gray-400 text-xs overflow-auto max-h-32">
+              {JSON.stringify(debugInfo, null, 2)}
+            </pre>
+          </div>
           
           <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
             <button
@@ -367,7 +409,7 @@ export const Conversation: React.FC = () => {
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white/10 backdrop-blur-sm rounded-3xl p-12 border border-white/20 text-center max-w-md"
+          className="bg-white/10 backdrop-blur-sm rounded-3xl p-12 border border-white/20 text-center max-w-lg"
         >
           <motion.div
             animate={{ rotate: 360 }}
@@ -377,27 +419,46 @@ export const Conversation: React.FC = () => {
             <Heart className="w-8 h-8 text-white" />
           </motion.div>
           <h2 className="text-2xl font-bold text-white mb-4">
-            {!therapistJoined ? 'Waiting for AI Therapist' : 'Connecting to Your AI Therapist'}
+            {connectionStatus === 'connecting' ? 'Connecting to Session' :
+             connectionStatus === 'joining' ? 'Joining Video Call' :
+             connectionStatus === 'connected' ? 'Setting Up Video' :
+             connectionStatus === 'retrying' ? 'Retrying Connection' :
+             !therapistJoined ? 'Waiting for AI Therapist' : 'Preparing Session'}
           </h2>
           <p className="text-white/80 mb-4">
-            {isJoiningCall 
-              ? `Joining your therapy session... ${retryCount > 0 ? `(Retry ${retryCount}/3)` : ''}`
-              : !therapistJoined
-              ? 'Your AI therapist is joining the session...'
-              : 'Preparing your therapeutic session...'
-            }
+            {connectionStatus === 'connecting' ? 'Establishing secure connection...' :
+             connectionStatus === 'joining' ? `Joining your therapy session... ${retryCount > 0 ? `(Retry ${retryCount}/3)` : ''}` :
+             connectionStatus === 'connected' ? 'Configuring audio and video...' :
+             connectionStatus === 'retrying' ? 'Attempting to reconnect...' :
+             !therapistJoined ? 'Your AI therapist is joining the session...' : 'Preparing your therapeutic session...'}
           </p>
-          <div className="bg-blue-500/20 backdrop-blur-sm rounded-xl p-4 border border-blue-400/30">
+          
+          {/* Connection Status */}
+          <div className="bg-blue-500/20 backdrop-blur-sm rounded-xl p-4 border border-blue-400/30 mb-4">
             <div className="flex items-center justify-center gap-2 mb-2">
-              <MessageCircle className="w-4 h-4 text-blue-200" />
+              <div className={`w-3 h-3 rounded-full ${
+                connectionStatus === 'ready' ? 'bg-green-400' :
+                connectionStatus === 'error' ? 'bg-red-400' :
+                'bg-yellow-400 animate-pulse'
+              }`}></div>
               <p className="text-blue-200 text-sm font-medium">
-                Interactive AI Session
+                Status: {connectionStatus.replace('_', ' ')}
               </p>
             </div>
             <p className="text-blue-200 text-xs">
-              ✨ The AI therapist will greet you when ready
+              Session: {conversationId}
             </p>
           </div>
+
+          {/* Debug info for development */}
+          {import.meta.env.MODE === 'development' && (
+            <div className="bg-gray-800/50 rounded-lg p-3 text-left">
+              <p className="text-gray-300 text-xs mb-2">Debug Info:</p>
+              <pre className="text-gray-400 text-xs overflow-auto max-h-24">
+                {JSON.stringify(debugInfo, null, 2)}
+              </pre>
+            </div>
+          )}
         </motion.div>
       </div>
     );
