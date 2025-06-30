@@ -43,7 +43,6 @@ export const Conversation: React.FC = () => {
   const [isTherapistSpeaking, setIsTherapistSpeaking] = useState(false);
   const [showHelpTips, setShowHelpTips] = useState(false);
   const [hasEnabledMic, setHasEnabledMic] = useState(false);
-  const [isPersistentSession, setIsPersistentSession] = useState(true);
 
   const daily = useDaily();
   const localSessionId = useLocalSessionId();
@@ -52,10 +51,6 @@ export const Conversation: React.FC = () => {
   const isCameraEnabled = !localVideo.isOff;
   const isMicEnabled = !localAudio.isOff;
   const remoteParticipantIds = useParticipantIds({ filter: "remote" });
-
-  // Use the persistent conversation details (always available)
-  const persistentConversationUrl = "https://tavus.daily.co/ceabd05581a44419";
-  const persistentConversationId = "ceabd05581a44419";
 
   // Session timer
   useEffect(() => {
@@ -85,25 +80,12 @@ export const Conversation: React.FC = () => {
     };
   }, [showControls]);
 
-  // Set up the conversation object
+  // Set up the conversation object - always create a new session if none exists
   useEffect(() => {
     if (!conversation) {
-      if (isPersistentSession) {
-        // Use existing persistent session
-        const persistentConversation = {
-          conversation_id: persistentConversationId,
-          conversation_name: "AI Therapy - Always Available",
-          status: ConversationStatus.ACTIVE,
-          conversation_url: persistentConversationUrl,
-          created_at: new Date().toLocaleString(),
-        };
-        setConversation(persistentConversation);
-      } else {
-        // Create new session
-        createNewSession();
-      }
+      createNewSession();
     }
-  }, [conversation, setConversation, isPersistentSession]);
+  }, [conversation, setConversation]);
 
   const createNewSession = async () => {
     try {
@@ -122,7 +104,7 @@ export const Conversation: React.FC = () => {
   };
 
   useEffect(() => {
-    const conversationUrl = conversation?.conversation_url || persistentConversationUrl;
+    const conversationUrl = conversation?.conversation_url;
     
     if (!conversationUrl || !daily || isJoiningCall) return;
 
@@ -131,7 +113,7 @@ export const Conversation: React.FC = () => {
       
       try {
         console.log("Joining therapy session with URL:", conversationUrl);
-        console.log("Session type:", isPersistentSession ? "Persistent (Always Available)" : "New Session");
+        console.log("Session type: Persistent (Always Available)");
         
         await daily.join({
           url: conversationUrl,
@@ -160,7 +142,7 @@ export const Conversation: React.FC = () => {
     };
 
     joinCall();
-  }, [conversation?.conversation_url, daily, isJoiningCall, isPersistentSession]);
+  }, [conversation?.conversation_url, daily, isJoiningCall]);
 
   // Ensure microphone is enabled when AI therapist joins
   useEffect(() => {
@@ -208,19 +190,19 @@ export const Conversation: React.FC = () => {
 
   const leaveConversation = useCallback(() => {
     const sessionDuration = Math.floor((Date.now() - sessionStartTime) / 1000);
-    const conversationId = conversation?.conversation_id || persistentConversationId;
+    const conversationId = conversation?.conversation_id;
     
     console.log('Leaving conversation', { 
       conversationId: conversationId,
       sessionDuration,
-      sessionType: isPersistentSession ? 'persistent' : 'new'
+      sessionType: 'persistent'
     });
     
     daily?.leave();
     daily?.destroy();
     
-    // Only end conversation if it's a new session, not persistent
-    if (token && !isPersistentSession) {
+    // Only end conversation if we have a token and conversation ID
+    if (token && conversationId) {
       endConversation(token, conversationId).catch(error => {
         console.error('Failed to end conversation via API', error);
       });
@@ -228,7 +210,7 @@ export const Conversation: React.FC = () => {
     
     setConversation(null);
     setScreenState({ currentScreen: "finalScreen" });
-  }, [daily, token, setConversation, setScreenState, sessionStartTime, conversation?.conversation_id, isPersistentSession]);
+  }, [daily, token, setConversation, setScreenState, sessionStartTime, conversation?.conversation_id]);
 
   const retryConnection = useCallback(() => {
     console.log('Retrying connection');
@@ -236,7 +218,8 @@ export const Conversation: React.FC = () => {
     setError(null);
     setIsJoiningCall(false);
     setHasEnabledMic(false);
-  }, []);
+    setConversation(null); // Reset conversation to trigger new session creation
+  }, [setConversation]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -303,19 +286,19 @@ export const Conversation: React.FC = () => {
             <Heart className="w-8 h-8 text-white" />
           </motion.div>
           <h2 className="text-2xl font-bold text-white mb-4">
-            {isPersistentSession ? 'Connecting to Your AI Therapist' : 'Creating Your Session'}
+            Connecting to Your AI Therapist
           </h2>
           <p className="text-white/80 mb-4">
             {isJoiningCall 
-              ? (isPersistentSession ? 'Joining the always-available therapeutic space...' : 'Connecting to your new AI therapist...')
+              ? 'Joining the always-available therapeutic space...'
               : 'Creating a safe therapeutic space...'
             }
           </p>
           <div className="bg-blue-500/20 backdrop-blur-sm rounded-xl p-4 border border-blue-400/30">
             <div className="flex items-center justify-center gap-2 mb-2">
-              {isPersistentSession && <Zap className="w-4 h-4 text-blue-200" />}
+              <Zap className="w-4 h-4 text-blue-200" />
               <p className="text-blue-200 text-sm font-medium">
-                {isPersistentSession ? 'Always-Available Session' : 'New Private Session'}
+                Always-Available Session
               </p>
             </div>
             <p className="text-blue-200 text-xs">
@@ -344,9 +327,9 @@ export const Conversation: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${connectionQuality === 'good' ? 'bg-green-400' : connectionQuality === 'fair' ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
                     <span className="text-white text-sm font-medium">
-                      {isPersistentSession ? 'Always-Available Session' : 'Private Session'}
+                      Always-Available Session
                     </span>
-                    {isPersistentSession && <Zap className="w-3 h-3 text-green-400" />}
+                    <Zap className="w-3 h-3 text-green-400" />
                   </div>
                   <div className="text-white/70 text-sm">{formatTime(sessionTime)}</div>
                   {!isMicEnabled && (
@@ -449,14 +432,12 @@ export const Conversation: React.FC = () => {
                 </motion.div>
               )}
               {/* Always Available Indicator */}
-              {isPersistentSession && (
-                <div className="absolute top-4 right-4 bg-blue-500/80 backdrop-blur-sm rounded-full px-3 py-1 border border-blue-400">
-                  <div className="flex items-center gap-2">
-                    <Zap className="w-3 h-3 text-blue-100" />
-                    <span className="text-blue-100 text-sm font-medium">Always Available</span>
-                  </div>
+              <div className="absolute top-4 right-4 bg-blue-500/80 backdrop-blur-sm rounded-full px-3 py-1 border border-blue-400">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-3 h-3 text-blue-100" />
+                  <span className="text-blue-100 text-sm font-medium">Always Available</span>
                 </div>
-              )}
+              </div>
             </div>
           ) : (
             <div className="flex h-full items-center justify-center">
@@ -470,7 +451,7 @@ export const Conversation: React.FC = () => {
                 </motion.div>
                 <p className="text-white text-lg">Your AI therapist is joining...</p>
                 <p className="text-white/60 text-sm mt-2">
-                  {isPersistentSession ? 'Connecting to always-available support' : 'Creating a safe space for healing'}
+                  Connecting to always-available support
                 </p>
               </div>
             </div>
@@ -560,11 +541,9 @@ export const Conversation: React.FC = () => {
                     </div>
                   </motion.div>
                 )}
-                {isPersistentSession && (
-                  <div className="absolute top-3 right-3 bg-blue-500/80 backdrop-blur-sm rounded-lg px-2 py-1">
-                    <Zap className="w-3 h-3 text-blue-100" />
-                  </div>
-                )}
+                <div className="absolute top-3 right-3 bg-blue-500/80 backdrop-blur-sm rounded-lg px-2 py-1">
+                  <Zap className="w-3 h-3 text-blue-100" />
+                </div>
               </div>
             ) : (
               <div className="flex h-full items-center justify-center">
@@ -582,7 +561,7 @@ export const Conversation: React.FC = () => {
             )}
             <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-1">
               <p className="text-white text-xs font-medium">
-                {isPersistentSession ? 'Always-Available AI Therapist' : 'AI Therapist'}
+                Always-Available AI Therapist
               </p>
             </div>
           </div>
