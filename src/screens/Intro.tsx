@@ -4,7 +4,7 @@ import { screenAtom } from "@/store/screens";
 import { apiTokenAtom } from "@/store/tokens";
 import { conversationAtom } from "@/store/conversation";
 import { motion } from "framer-motion";
-import { Heart, Shield, Clock, Users, Brain, Sparkles, AlertTriangle, CheckCircle, Trophy, Zap, Globe } from "lucide-react";
+import { Heart, Shield, Clock, Users, Brain, Sparkles, AlertTriangle, CheckCircle, Zap, Globe } from "lucide-react";
 import { ConversationStatus } from "@/types";
 
 export const Intro: React.FC = () => {
@@ -60,44 +60,44 @@ export const Intro: React.FC = () => {
     }
   };
 
-  const hackathonFeatures = [
+  const features = [
     {
       icon: Zap,
       title: "Instant Access",
-      description: "Connect to AI therapist in seconds - no appointments, no waiting lists"
+      description: "Connect to your AI therapist immediately - no appointments or waiting lists"
     },
     {
       icon: Brain,
-      title: "Real AI Interaction",
-      description: "Full video conversations with AI that sees, hears, and responds naturally"
+      title: "Interactive Sessions",
+      description: "Full video conversations with AI that understands and responds naturally"
     },
     {
       icon: Shield,
-      title: "Privacy First",
-      description: "Zero data storage, end-to-end encryption, completely anonymous sessions"
+      title: "Complete Privacy",
+      description: "Your conversations are confidential and secure - nothing is stored or recorded"
     },
     {
       icon: Globe,
-      title: "Global Impact",
-      description: "24/7 availability breaks down barriers to mental health care worldwide"
+      title: "Always Available",
+      description: "24/7 support whenever you need someone to talk to"
     },
     {
       icon: Heart,
-      title: "Professional Quality",
-      description: "Evidence-based therapy techniques from CBT, DBT, and trauma-informed care"
+      title: "Professional Care",
+      description: "Evidence-based therapeutic techniques and compassionate support"
     },
     {
-      icon: Trophy,
-      title: "Revolutionary Tech",
-      description: "First interactive video AI therapist using cutting-edge conversational AI"
+      icon: Users,
+      title: "Judgment-Free Space",
+      description: "Safe environment to explore your thoughts and feelings without fear"
     }
   ];
 
   const stats = [
-    { number: "24/7", label: "Availability" },
-    { number: "0s", label: "Wait Time" },
+    { number: "24/7", label: "Available" },
+    { number: "0", label: "Wait Time" },
     { number: "100%", label: "Private" },
-    { number: "∞", label: "Scalability" }
+    { number: "∞", label: "Sessions" }
   ];
 
   if (error) {
@@ -152,16 +152,11 @@ export const Intro: React.FC = () => {
             <Heart className="w-8 h-8 text-white" />
           </motion.div>
           <h2 className="text-2xl font-bold text-white mb-4">
-            Connecting to AI Therapist
+            Connecting to Your Therapist
           </h2>
           <p className="text-white/80">
-            Launching your interactive therapy session...
+            Preparing your secure therapy session...
           </p>
-          <div className="bg-green-500/20 backdrop-blur-sm rounded-xl p-4 border border-green-400/30 mt-4">
-            <p className="text-green-200 text-sm">
-              🚀 Hackathon Demo Ready
-            </p>
-          </div>
         </motion.div>
       </div>
     );
@@ -170,20 +165,6 @@ export const Intro: React.FC = () => {
   return (
     <div className="min-h-screen bg-black overflow-y-auto">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Hackathon Badge */}
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 backdrop-blur-sm rounded-full px-6 py-3 border border-yellow-400/30">
-            <Trophy className="w-5 h-5 text-yellow-400" />
-            <span className="text-yellow-200 font-semibold">Hackathon Demo</span>
-            <span className="text-yellow-300">•</span>
-            <span className="text-yellow-200">Live AI Therapy Platform</span>
-          </div>
-        </motion.div>
-
         {/* Hero Section */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -202,15 +183,15 @@ export const Intro: React.FC = () => {
             </motion.div>
             
             <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-              Revolutionary
+              AI Therapy
               <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent block">
-                AI Therapy Platform
+                Professional Support
               </span>
             </h1>
             
             <p className="text-xl text-white/80 mb-8 max-w-3xl mx-auto leading-relaxed">
-              The world's first interactive video AI therapist. Get instant, professional mental health support 
-              through real-time video conversations. No appointments, no waiting - just immediate, compassionate care.
+              Connect with an AI therapist for professional mental health support through interactive video conversations. 
+              Available 24/7, completely private, and designed to help you heal and grow.
             </p>
 
             {/* Stats */}
@@ -232,10 +213,10 @@ export const Intro: React.FC = () => {
             <div className="bg-green-500/20 backdrop-blur-sm rounded-2xl p-4 mb-8 border border-green-400/30">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                <p className="text-green-200 font-semibold">Live Demo Ready</p>
+                <p className="text-green-200 font-semibold">Therapist Available Now</p>
               </div>
               <p className="text-green-100/80 text-sm">
-                Interactive AI therapist waiting • Full video conversation • Completely private
+                Your AI therapist is ready for an interactive video session
               </p>
             </div>
 
@@ -246,12 +227,12 @@ export const Intro: React.FC = () => {
               disabled={isStarting}
               className="px-12 py-4 bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 hover:from-green-700 hover:via-blue-700 hover:to-purple-700 text-white text-xl font-semibold rounded-2xl transition-all duration-300 shadow-2xl hover:shadow-green-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              🚀 Start Live Demo
+              Start Your Session
             </motion.button>
           </div>
         </motion.div>
 
-        {/* Hackathon Features */}
+        {/* Features */}
         <motion.div 
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -259,10 +240,10 @@ export const Intro: React.FC = () => {
           className="mb-16"
         >
           <h2 className="text-3xl font-bold text-white text-center mb-8">
-            🏆 Why This Will Win
+            Why Choose AI Therapy?
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {hackathonFeatures.map((feature, index) => (
+            {features.map((feature, index) => (
               <motion.div
                 key={feature.title}
                 initial={{ opacity: 0, y: 20 }}
@@ -278,22 +259,46 @@ export const Intro: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Impact Statement */}
+        {/* Specializations */}
         <motion.div 
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 1.0 }}
-          className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 backdrop-blur-sm rounded-2xl p-8 border border-purple-400/30 mb-8 text-center"
+          transition={{ duration: 0.8, delay: 0.8 }}
+          className="mb-16"
         >
-          <h3 className="text-2xl font-bold text-white mb-4">🌍 Global Impact</h3>
-          <p className="text-white/80 text-lg mb-4">
-            Mental health care has a 6+ month wait time and costs $100-300 per session. 
-            Our platform provides instant, professional therapy for free.
-          </p>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-            <p className="text-white font-semibold">
-              This could help millions of people get mental health support when they need it most.
-            </p>
+          <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-8 border border-white/10">
+            <h2 className="text-3xl font-bold text-white text-center mb-8">
+              Comprehensive Support Areas
+            </h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                "Anxiety & Depression",
+                "Trauma & PTSD",
+                "Relationship Issues",
+                "Life Transitions",
+                "Stress Management",
+                "Self-Esteem & Confidence",
+                "Grief & Loss",
+                "Work-Life Balance",
+                "Family Dynamics",
+                "Addiction Recovery",
+                "Sleep & Wellness",
+                "Personal Growth"
+              ].map((area, index) => (
+                <motion.div
+                  key={area}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 1.0 + index * 0.1 }}
+                  className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20"
+                >
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                    <p className="text-white font-medium">{area}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </motion.div>
 
@@ -317,7 +322,7 @@ export const Intro: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Tech Stack */}
+        {/* Privacy Notice */}
         <motion.div 
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -325,13 +330,12 @@ export const Intro: React.FC = () => {
           className="text-center"
         >
           <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-            <h3 className="text-lg font-semibold text-white mb-3">⚡ Powered By</h3>
-            <p className="text-white/70 text-sm">
-              React • TypeScript • Tavus AI • Daily.co WebRTC • Framer Motion • Tailwind CSS
+            <h3 className="text-lg font-semibold text-white mb-3">🔒 Your Privacy is Protected</h3>
+            <p className="text-white/70 text-sm leading-relaxed">
+              All conversations are completely confidential and secure. No personal information is stored, 
+              and your sessions are private between you and your AI therapist. This platform uses 
+              end-to-end encryption to ensure your privacy and safety.
             </p>
-            <div className="mt-4 text-white/40 text-xs">
-              Built for hackathon • Deployed on Netlify • Ready to scale globally
-            </div>
           </div>
         </motion.div>
       </div>
