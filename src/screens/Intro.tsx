@@ -3,6 +3,7 @@ import { useAtom } from "jotai";
 import { screenAtom } from "@/store/screens";
 import { apiTokenAtom } from "@/store/tokens";
 import { conversationAtom } from "@/store/conversation";
+import { createPersistentConversation } from "@/api/createPersistentConversation";
 import { motion } from "framer-motion";
 import { Heart, Shield, Clock, Users, Brain, Sparkles, AlertTriangle } from "lucide-react";
 import { ConversationStatus } from "@/types";
@@ -28,21 +29,25 @@ export const Intro: React.FC = () => {
     setError(null);
     
     try {
-      console.log("Starting therapy session with direct conversation link");
+      console.log("Creating new therapy session...");
       
-      // Use the provided conversation link directly instead of creating a new one
-      const directConversation = {
-        conversation_id: "ca1906a3ee1ff4fb",
-        conversation_name: "AI Therapy Session",
-        status: ConversationStatus.ACTIVE,
-        conversation_url: "https://tavus.daily.co/ca1906a3ee1ff4fb",
-        created_at: new Date().toLocaleString(),
-      };
+      if (!token) {
+        throw new Error("API token is required");
+      }
       
-      console.log("Using direct conversation link:", directConversation);
+      // Create a new persistent conversation using the API
+      const conversationData = await createPersistentConversation(token);
+      
+      console.log("Created conversation:", conversationData);
       
       // Store the conversation data
-      setConversation(directConversation);
+      setConversation({
+        conversation_id: conversationData.conversation_id,
+        conversation_name: "AI Therapy Session",
+        status: ConversationStatus.ACTIVE,
+        conversation_url: conversationData.conversation_url,
+        created_at: new Date().toLocaleString(),
+      });
       
       // Navigate to conversation screen
       setTimeout(() => {
@@ -153,14 +158,14 @@ export const Intro: React.FC = () => {
             <Heart className="w-8 h-8 text-white" />
           </motion.div>
           <h2 className="text-2xl font-bold text-white mb-4">
-            Connecting to Your AI Therapist
+            Creating Your AI Therapy Session
           </h2>
           <p className="text-white/80">
-            Joining your therapeutic session...
+            Setting up your personalized therapeutic session...
           </p>
           <div className="bg-green-500/20 backdrop-blur-sm rounded-xl p-4 border border-green-400/30 mt-4">
             <p className="text-green-200 text-sm">
-              ✨ Using direct conversation link for instant connection
+              ✨ Creating secure conversation room
             </p>
           </div>
         </motion.div>
@@ -270,8 +275,8 @@ export const Intro: React.FC = () => {
             <Clock className="w-12 h-12 text-green-400 mx-auto mb-4" />
             <h2 className="text-3xl font-bold text-white mb-4">How It Works</h2>
             <p className="text-green-100/90 text-lg mb-6 max-w-3xl mx-auto">
-              Connect instantly to your AI therapist using a direct conversation link. 
-              No complex setup required - just click and start your healing journey.
+              We create a secure, personalized therapy session just for you. 
+              Each session is private and connects you directly with your AI therapist.
             </p>
             <div className="grid md:grid-cols-3 gap-4 text-sm">
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
@@ -281,8 +286,8 @@ export const Intro: React.FC = () => {
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                 <div className="w-8 h-8 bg-green-400 text-black rounded-full flex items-center justify-center mx-auto mb-2 font-bold">2</div>
-                <p className="text-green-200 font-semibold">Connect Instantly</p>
-                <p className="text-green-100/80">Direct link to your AI therapist</p>
+                <p className="text-green-200 font-semibold">Create Session</p>
+                <p className="text-green-100/80">Secure room created for you</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                 <div className="w-8 h-8 bg-green-400 text-black rounded-full flex items-center justify-center mx-auto mb-2 font-bold">3</div>

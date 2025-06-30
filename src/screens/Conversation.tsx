@@ -54,9 +54,9 @@ export const Conversation: React.FC = () => {
   const isMicEnabled = !localAudio.isOff;
   const remoteParticipantIds = useParticipantIds({ filter: "remote" });
 
-  // Use the provided conversation link directly
-  const conversationUrl = "https://tavus.daily.co/ca1906a3ee1ff4fb";
-  const conversationId = "ca1906a3ee1ff4fb";
+  // Get conversation URL and ID from the conversation atom
+  const conversationUrl = conversation?.conversation_url;
+  const conversationId = conversation?.conversation_id;
 
   // Session timer
   useEffect(() => {
@@ -86,23 +86,9 @@ export const Conversation: React.FC = () => {
     };
   }, [showControls]);
 
-  // Set up the conversation object with the provided link
-  useEffect(() => {
-    if (!conversation) {
-      const directConversation = {
-        conversation_id: conversationId,
-        conversation_name: "AI Therapy Session",
-        status: ConversationStatus.ACTIVE,
-        conversation_url: conversationUrl,
-        created_at: new Date().toLocaleString(),
-      };
-      setConversation(directConversation);
-    }
-  }, [conversation, setConversation]);
-
   // Join the conversation when URL is available
   useEffect(() => {
-    if (!conversationUrl || !daily || isJoiningCall) {
+    if (!conversationUrl || !daily || isJoiningCall || !conversation) {
       return;
     }
 
@@ -145,7 +131,7 @@ export const Conversation: React.FC = () => {
     const joinTimer = setTimeout(joinCall, 1000);
     return () => clearTimeout(joinTimer);
     
-  }, [daily, isJoiningCall]);
+  }, [daily, isJoiningCall, conversationUrl, conversation]);
 
   // Monitor when AI therapist joins
   useEffect(() => {
@@ -206,7 +192,7 @@ export const Conversation: React.FC = () => {
     }
   }, [daily, isMicEnabled]);
 
-  const leaveConversation = useCallback(() => {
+  const leaveConversation = useCallback(async () => {
     const sessionDuration = Math.floor((Date.now() - sessionStartTime) / 1000);
     
     console.log('Leaving AI therapy conversation', { 
@@ -217,12 +203,20 @@ export const Conversation: React.FC = () => {
     daily?.leave();
     daily?.destroy();
     
-    // Note: We don't call endConversation API for the direct link approach
-    // as this is a persistent conversation link
+    // End the conversation via API if we have the necessary data
+    if (conversationId && token) {
+      try {
+        await endConversation(conversationId, token);
+        console.log('Conversation ended successfully');
+      } catch (error) {
+        console.error('Failed to end conversation:', error);
+        // Don't block the user from leaving even if API call fails
+      }
+    }
     
     setConversation(null);
     setScreenState({ currentScreen: "finalScreen" });
-  }, [daily, setConversation, setScreenState, sessionStartTime]);
+  }, [daily, setConversation, setScreenState, sessionStartTime, conversationId, token]);
 
   const retryConnection = useCallback(() => {
     console.log('Retrying AI therapy connection');
@@ -267,6 +261,32 @@ export const Conversation: React.FC = () => {
 
     return () => clearTimeout(timeout);
   }, [isLoading, error]);
+
+  // Check if we have conversation data
+  if (!conversation) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 border border-white/20 text-center max-w-md w-full"
+        >
+          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-500/20 flex items-center justify-center">
+            <AlertTriangle className="w-8 h-8 text-red-400" />
+          </div>
+          <h2 className="text-xl font-bold text-red-400 mb-4">No Session Found</h2>
+          <p className="text-white mb-6 text-sm">No active therapy session found. Please start a new session.</p>
+          
+          <button
+            onClick={() => setScreenState({ currentScreen: "intro" })}
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+          >
+            Start New Session
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (error) {
     return (
