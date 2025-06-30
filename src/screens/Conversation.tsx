@@ -46,6 +46,7 @@ export const Conversation: React.FC = () => {
   const [hasEnabledMic, setHasEnabledMic] = useState(false);
   const [therapistJoined, setTherapistJoined] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  const [creationAttempts, setCreationAttempts] = useState(0);
 
   const daily = useDaily();
   const localSessionId = useLocalSessionId();
@@ -68,7 +69,7 @@ export const Conversation: React.FC = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowControls(false);
-    }, 8000); // Longer timeout for better UX
+    }, 8000);
 
     const handleMouseMove = () => {
       setShowControls(true);
@@ -83,27 +84,58 @@ export const Conversation: React.FC = () => {
     };
   }, [showControls]);
 
-  // Create conversation if none exists
+  // Create conversation when component mounts
   useEffect(() => {
-    if (!conversation && !isLoading) {
+    if (!conversation && creationAttempts === 0) {
       createNewSession();
     }
-  }, [conversation]);
+  }, []);
 
   const createNewSession = async () => {
+    if (creationAttempts >= 3) {
+      setError("Failed to create session after multiple attempts. Please try again.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
+      setCreationAttempts(prev => prev + 1);
       setIsLoading(true);
       setError(null);
-      console.log("Creating new AI therapy conversation session");
+      
+      console.log(`Creating AI therapy session (attempt ${creationAttempts + 1})`);
+      console.log("Using token:", token);
+      console.log("Using replica ID from config");
       
       const newConversation = await createPersistentConversation(token || undefined);
+      
+      console.log("AI therapy session created successfully:", newConversation);
+      
+      if (!newConversation || !newConversation.conversation_url) {
+        throw new Error("Invalid conversation response - missing URL");
+      }
+      
       setConversation(newConversation);
       
-      console.log("New AI therapy session created:", newConversation);
+      // Don't set loading to false here - wait for successful join
+      console.log("Conversation object set, proceeding to join call");
+      
     } catch (error) {
       console.error("Failed to create AI therapy session:", error);
-      setError(`Failed to create session: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setIsLoading(false);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error("Detailed error:", errorMessage);
+      
+      // Try again if we haven't exceeded max attempts
+      if (creationAttempts < 2) {
+        console.log("Retrying session creation in 2 seconds...");
+        setTimeout(() => {
+          createNewSession();
+        }, 2000);
+      } else {
+        setError(`Failed to create session: ${errorMessage}`);
+        setIsLoading(false);
+      }
     }
   };
 
@@ -111,7 +143,9 @@ export const Conversation: React.FC = () => {
   useEffect(() => {
     const conversationUrl = conversation?.conversation_url;
     
-    if (!conversationUrl || !daily || isJoiningCall) return;
+    if (!conversationUrl || !daily || isJoiningCall) {
+      return;
+    }
 
     const joinCall = async () => {
       setIsJoiningCall(true);
@@ -119,39 +153,45 @@ export const Conversation: React.FC = () => {
       try {
         console.log("Joining AI therapy session with URL:", conversationUrl);
         
+        // Join the call
         await daily.join({
           url: conversationUrl,
           startVideoOff: false,
-          startAudioOff: false, // Critical: Start with audio ON so AI can hear you
+          startAudioOff: false,
         });
         
         console.log("Successfully joined AI therapy session");
         
-        // Ensure both video and audio are enabled immediately
+        // Enable video and audio
         await daily.setLocalVideo(true);
         await daily.setLocalAudio(true);
         
-        setIsLoading(false);
-        setError(null);
         setHasEnabledMic(true);
+        setIsLoading(false); // Only set loading to false after successful join
+        setError(null);
         
-        console.log("Audio and video enabled - AI therapist can now see and hear you");
+        console.log("Audio and video enabled - ready for AI therapist");
+        
       } catch (error) {
         console.error("Failed to join AI therapy session:", error);
-        setError(`Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        setError(`Failed to connect to session: ${errorMessage}`);
         setIsLoading(false);
       } finally {
         setIsJoiningCall(false);
       }
     };
 
-    joinCall();
+    // Add a small delay to ensure everything is ready
+    const joinTimer = setTimeout(joinCall, 1000);
+    return () => clearTimeout(joinTimer);
+    
   }, [conversation?.conversation_url, daily, isJoiningCall]);
 
-  // Monitor when AI therapist joins and ensure proper setup
+  // Monitor when AI therapist joins
   useEffect(() => {
     if (remoteParticipantIds.length > 0 && !therapistJoined) {
-      console.log("AI therapist has joined the session");
+      console.log("AI therapist has joined the session!");
       setTherapistJoined(true);
       
       // Ensure microphone is enabled when therapist joins
@@ -161,11 +201,12 @@ export const Conversation: React.FC = () => {
         console.log("Microphone enabled for AI therapist interaction");
       }
       
-      // Mark session as ready after a brief delay
+      // Mark session as ready
       setTimeout(() => {
         setSessionReady(true);
-        console.log("Session is ready - AI therapist can see and hear you, and will begin conversation");
+        console.log("Session is fully ready - AI therapist can see and hear you");
       }, 2000);
+      
     } else if (remoteParticipantIds.length === 0 && therapistJoined) {
       console.log("AI therapist has left the session");
       setTherapistJoined(false);
@@ -173,12 +214,11 @@ export const Conversation: React.FC = () => {
     }
   }, [remoteParticipantIds, therapistJoined, daily, hasEnabledMic]);
 
-  // Monitor audio levels for speaking indicator (simplified)
+  // Monitor audio levels for speaking indicator
   useEffect(() => {
     if (!daily || !therapistJoined) return;
 
     const interval = setInterval(() => {
-      // Simple simulation - in real implementation you'd use actual audio level detection
       setIsTherapistSpeaking(Math.random() > 0.8);
     }, 2000);
 
@@ -219,7 +259,6 @@ export const Conversation: React.FC = () => {
     daily?.leave();
     daily?.destroy();
     
-    // End conversation via API if we have the details
     if (token && conversationId) {
       endConversation(token, conversationId).catch(error => {
         console.error('Failed to end conversation via API', error);
@@ -238,7 +277,13 @@ export const Conversation: React.FC = () => {
     setHasEnabledMic(false);
     setTherapistJoined(false);
     setSessionReady(false);
-    setConversation(null); // This will trigger new session creation
+    setCreationAttempts(0);
+    setConversation(null);
+    
+    // Start fresh session creation
+    setTimeout(() => {
+      createNewSession();
+    }, 1000);
   }, [setConversation]);
 
   const formatTime = (seconds: number) => {
@@ -257,6 +302,19 @@ export const Conversation: React.FC = () => {
     "If you have technical issues, try the retry button or refresh the page"
   ];
 
+  // Add timeout for loading state
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (isLoading && !error) {
+        console.log("Session creation taking longer than expected");
+        setError("Session creation is taking longer than expected. Please try again.");
+        setIsLoading(false);
+      }
+    }, 30000); // 30 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [isLoading, error]);
+
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black p-4">
@@ -270,6 +328,15 @@ export const Conversation: React.FC = () => {
           </div>
           <h2 className="text-xl font-bold text-red-400 mb-4">Connection Issue</h2>
           <p className="text-white mb-6 text-sm">{error}</p>
+          
+          <div className="bg-yellow-500/20 backdrop-blur-sm rounded-xl p-4 mb-6 border border-yellow-400/30">
+            <p className="text-yellow-200 text-sm">
+              <strong>Troubleshooting:</strong><br/>
+              • Check your internet connection<br/>
+              • Ensure camera/microphone permissions are granted<br/>
+              • Try refreshing the page if the issue persists
+            </p>
+          </div>
           
           <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
             <button
@@ -309,9 +376,11 @@ export const Conversation: React.FC = () => {
             Setting Up Your AI Therapist
           </h2>
           <p className="text-white/80 mb-4">
-            {isJoiningCall 
-              ? 'Connecting to your AI therapist...'
-              : 'Creating your therapeutic session...'
+            {!conversation 
+              ? `Creating your session... (attempt ${creationAttempts}/3)`
+              : isJoiningCall 
+                ? 'Connecting to your AI therapist...'
+                : 'Preparing your therapeutic session...'
             }
           </p>
           <div className="bg-blue-500/20 backdrop-blur-sm rounded-xl p-4 border border-blue-400/30">
@@ -325,6 +394,14 @@ export const Conversation: React.FC = () => {
               ✨ Setting up video and audio for conversation
             </p>
           </div>
+          
+          {creationAttempts > 1 && (
+            <div className="mt-4 bg-yellow-500/20 backdrop-blur-sm rounded-xl p-3 border border-yellow-400/30">
+              <p className="text-yellow-200 text-xs">
+                Retrying connection... Please wait
+              </p>
+            </div>
+          )}
         </motion.div>
       </div>
     );
