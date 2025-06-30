@@ -55,10 +55,6 @@ export const Conversation: React.FC = () => {
   const isMicEnabled = !localAudio.isOff;
   const remoteParticipantIds = useParticipantIds({ filter: "remote" });
 
-  // Use the specific conversation URL directly
-  const conversationUrl = "https://tavus.daily.co/ce5f6050ae52d4b4";
-  const conversationId = "ce5f6050ae52d4b4";
-
   // Session timer
   useEffect(() => {
     const timer = setInterval(() => {
@@ -87,31 +83,26 @@ export const Conversation: React.FC = () => {
     };
   }, [showControls]);
 
-  // Set up the conversation object with the provided details
+  // Redirect to intro if no conversation exists
   useEffect(() => {
     if (!conversation) {
-      const staticConversation = {
-        conversation_id: conversationId,
-        conversation_name: "Therapeutic Session",
-        status: ConversationStatus.ACTIVE,
-        conversation_url: conversationUrl,
-        created_at: new Date().toLocaleString(),
-      };
-      setConversation(staticConversation);
+      console.log("No conversation found, redirecting to intro");
+      setScreenState({ currentScreen: "intro" });
+      return;
     }
-  }, [conversation, setConversation]);
+  }, [conversation, setScreenState]);
 
   useEffect(() => {
-    if (!conversationUrl || !daily || isJoiningCall) return;
+    if (!conversation?.conversation_url || !daily || isJoiningCall) return;
 
     const joinCall = async () => {
       setIsJoiningCall(true);
       
       try {
-        console.log("Joining comprehensive therapy session with URL:", conversationUrl);
+        console.log("Joining therapy session with URL:", conversation.conversation_url);
         
         await daily.join({
-          url: conversationUrl,
+          url: conversation.conversation_url,
           startVideoOff: false,
           startAudioOff: true,
         });
@@ -131,7 +122,7 @@ export const Conversation: React.FC = () => {
     };
 
     joinCall();
-  }, [conversationUrl, daily, isJoiningCall]);
+  }, [conversation?.conversation_url, daily, isJoiningCall]);
 
   useEffect(() => {
     if (remoteParticipantIds.length && !localAudio.isOff) return;
@@ -165,12 +156,12 @@ export const Conversation: React.FC = () => {
   const leaveConversation = useCallback(() => {
     daily?.leave();
     daily?.destroy();
-    if (token) {
-      endConversation(token, conversationId);
+    if (token && conversation?.conversation_id) {
+      endConversation(token, conversation.conversation_id);
     }
     setConversation(null);
     setScreenState({ currentScreen: "finalScreen" });
-  }, [daily, token, setConversation, setScreenState]);
+  }, [daily, token, conversation?.conversation_id, setConversation, setScreenState]);
 
   const retryConnection = useCallback(() => {
     setIsLoading(true);
@@ -191,6 +182,11 @@ export const Conversation: React.FC = () => {
     "If you feel overwhelmed, let your therapist know - they can guide you through grounding exercises",
     "This is your safe space - there's no judgment here, only support and understanding"
   ];
+
+  // Don't render if no conversation
+  if (!conversation) {
+    return null;
+  }
 
   if (error) {
     return (

@@ -2,13 +2,17 @@ import React, { useState } from "react";
 import { useAtom } from "jotai";
 import { screenAtom } from "@/store/screens";
 import { apiTokenAtom } from "@/store/tokens";
+import { conversationAtom } from "@/store/conversation";
+import { createConversation } from "@/api/createConversation";
 import { motion } from "framer-motion";
 import { Heart, Shield, Clock, Users, Brain, Sparkles } from "lucide-react";
 
 export const Intro: React.FC = () => {
   const [, setScreenState] = useAtom(screenAtom);
   const [token, setToken] = useAtom(apiTokenAtom);
+  const [, setConversation] = useAtom(conversationAtom);
   const [isStarting, setIsStarting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Set the default API key only if no token exists
   React.useEffect(() => {
@@ -20,13 +24,29 @@ export const Intro: React.FC = () => {
   }, [token, setToken]);
 
   const handleStartChat = async () => {
+    if (!token) {
+      setError("API token is required");
+      return;
+    }
+
     setIsStarting(true);
-    console.log("Starting comprehensive therapy session with token:", token);
+    setError(null);
     
-    // Add a brief delay for better UX
-    setTimeout(() => {
+    try {
+      console.log("Creating conversation with token:", token);
+      const conversation = await createConversation(token);
+      console.log("Conversation created:", conversation);
+      
+      // Store the conversation in the atom
+      setConversation(conversation);
+      
+      // Navigate to conversation screen
       setScreenState({ currentScreen: "conversation" });
-    }, 1500);
+    } catch (error) {
+      console.error("Failed to create conversation:", error);
+      setError(`Failed to start session: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setIsStarting(false);
+    }
   };
 
   const features = [
@@ -92,6 +112,20 @@ export const Intro: React.FC = () => {
           <p className="text-white/80">
             Creating a safe, therapeutic space just for you...
           </p>
+          {error && (
+            <div className="mt-4 p-3 bg-red-500/20 border border-red-400/30 rounded-lg">
+              <p className="text-red-200 text-sm">{error}</p>
+              <button
+                onClick={() => {
+                  setIsStarting(false);
+                  setError(null);
+                }}
+                className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
         </motion.div>
       </div>
     );
@@ -147,10 +181,17 @@ export const Intro: React.FC = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleStartChat}
-              className="px-12 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white text-xl font-semibold rounded-2xl transition-all duration-300 shadow-2xl hover:shadow-purple-500/25"
+              disabled={isStarting}
+              className="px-12 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white text-xl font-semibold rounded-2xl transition-all duration-300 shadow-2xl hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Begin Your Healing Journey
             </motion.button>
+
+            {error && (
+              <div className="mt-6 p-4 bg-red-500/20 border border-red-400/30 rounded-lg max-w-md mx-auto">
+                <p className="text-red-200 text-sm">{error}</p>
+              </div>
+            )}
           </div>
         </motion.div>
 
