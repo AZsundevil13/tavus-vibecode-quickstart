@@ -13,7 +13,6 @@ import { useAtom, useAtomValue } from "jotai";
 import { screenAtom } from "@/store/screens";
 import { Button } from "@/components/ui/button";
 import { endConversation } from "@/api/endConversation";
-import { createPersistentConversation } from "@/api/createPersistentConversation";
 import {
   MicIcon,
   MicOffIcon,
@@ -46,7 +45,6 @@ export const Conversation: React.FC = () => {
   const [hasEnabledMic, setHasEnabledMic] = useState(false);
   const [therapistJoined, setTherapistJoined] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
-  const [creationAttempts, setCreationAttempts] = useState(0);
 
   const daily = useDaily();
   const localSessionId = useLocalSessionId();
@@ -55,6 +53,10 @@ export const Conversation: React.FC = () => {
   const isCameraEnabled = !localVideo.isOff;
   const isMicEnabled = !localAudio.isOff;
   const remoteParticipantIds = useParticipantIds({ filter: "remote" });
+
+  // Use the provided conversation link directly
+  const conversationUrl = "https://tavus.daily.co/ca1906a3ee1ff4fb";
+  const conversationId = "ca1906a3ee1ff4fb";
 
   // Session timer
   useEffect(() => {
@@ -84,65 +86,22 @@ export const Conversation: React.FC = () => {
     };
   }, [showControls]);
 
-  // Create conversation when component mounts
+  // Set up the conversation object with the provided link
   useEffect(() => {
-    if (!conversation && creationAttempts === 0) {
-      createNewSession();
+    if (!conversation) {
+      const directConversation = {
+        conversation_id: conversationId,
+        conversation_name: "AI Therapy Session",
+        status: ConversationStatus.ACTIVE,
+        conversation_url: conversationUrl,
+        created_at: new Date().toLocaleString(),
+      };
+      setConversation(directConversation);
     }
-  }, []);
-
-  const createNewSession = async () => {
-    if (creationAttempts >= 3) {
-      setError("Failed to create session after multiple attempts. Please try again.");
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      setCreationAttempts(prev => prev + 1);
-      setIsLoading(true);
-      setError(null);
-      
-      console.log(`Creating AI therapy session (attempt ${creationAttempts + 1})`);
-      console.log("Using token:", token);
-      console.log("Using replica ID from config");
-      
-      const newConversation = await createPersistentConversation(token || undefined);
-      
-      console.log("AI therapy session created successfully:", newConversation);
-      
-      if (!newConversation || !newConversation.conversation_url) {
-        throw new Error("Invalid conversation response - missing URL");
-      }
-      
-      setConversation(newConversation);
-      
-      // Don't set loading to false here - wait for successful join
-      console.log("Conversation object set, proceeding to join call");
-      
-    } catch (error) {
-      console.error("Failed to create AI therapy session:", error);
-      
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error("Detailed error:", errorMessage);
-      
-      // Try again if we haven't exceeded max attempts
-      if (creationAttempts < 2) {
-        console.log("Retrying session creation in 2 seconds...");
-        setTimeout(() => {
-          createNewSession();
-        }, 2000);
-      } else {
-        setError(`Failed to create session: ${errorMessage}`);
-        setIsLoading(false);
-      }
-    }
-  };
+  }, [conversation, setConversation]);
 
   // Join the conversation when URL is available
   useEffect(() => {
-    const conversationUrl = conversation?.conversation_url;
-    
     if (!conversationUrl || !daily || isJoiningCall) {
       return;
     }
@@ -167,7 +126,7 @@ export const Conversation: React.FC = () => {
         await daily.setLocalAudio(true);
         
         setHasEnabledMic(true);
-        setIsLoading(false); // Only set loading to false after successful join
+        setIsLoading(false);
         setError(null);
         
         console.log("Audio and video enabled - ready for AI therapist");
@@ -186,7 +145,7 @@ export const Conversation: React.FC = () => {
     const joinTimer = setTimeout(joinCall, 1000);
     return () => clearTimeout(joinTimer);
     
-  }, [conversation?.conversation_url, daily, isJoiningCall]);
+  }, [daily, isJoiningCall]);
 
   // Monitor when AI therapist joins
   useEffect(() => {
@@ -249,7 +208,6 @@ export const Conversation: React.FC = () => {
 
   const leaveConversation = useCallback(() => {
     const sessionDuration = Math.floor((Date.now() - sessionStartTime) / 1000);
-    const conversationId = conversation?.conversation_id;
     
     console.log('Leaving AI therapy conversation', { 
       conversationId: conversationId,
@@ -259,15 +217,12 @@ export const Conversation: React.FC = () => {
     daily?.leave();
     daily?.destroy();
     
-    if (token && conversationId) {
-      endConversation(token, conversationId).catch(error => {
-        console.error('Failed to end conversation via API', error);
-      });
-    }
+    // Note: We don't call endConversation API for the direct link approach
+    // as this is a persistent conversation link
     
     setConversation(null);
     setScreenState({ currentScreen: "finalScreen" });
-  }, [daily, token, setConversation, setScreenState, sessionStartTime, conversation?.conversation_id]);
+  }, [daily, setConversation, setScreenState, sessionStartTime]);
 
   const retryConnection = useCallback(() => {
     console.log('Retrying AI therapy connection');
@@ -277,14 +232,12 @@ export const Conversation: React.FC = () => {
     setHasEnabledMic(false);
     setTherapistJoined(false);
     setSessionReady(false);
-    setCreationAttempts(0);
-    setConversation(null);
     
-    // Start fresh session creation
+    // Retry joining the call
     setTimeout(() => {
-      createNewSession();
+      // The useEffect will handle rejoining
     }, 1000);
-  }, [setConversation]);
+  }, []);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -306,8 +259,8 @@ export const Conversation: React.FC = () => {
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (isLoading && !error) {
-        console.log("Session creation taking longer than expected");
-        setError("Session creation is taking longer than expected. Please try again.");
+        console.log("Session connection taking longer than expected");
+        setError("Connection is taking longer than expected. Please try again.");
         setIsLoading(false);
       }
     }, 30000); // 30 second timeout
@@ -373,14 +326,12 @@ export const Conversation: React.FC = () => {
             <Heart className="w-8 h-8 text-white" />
           </motion.div>
           <h2 className="text-2xl font-bold text-white mb-4">
-            Setting Up Your AI Therapist
+            Connecting to Your AI Therapist
           </h2>
           <p className="text-white/80 mb-4">
-            {!conversation 
-              ? `Creating your session... (attempt ${creationAttempts}/3)`
-              : isJoiningCall 
-                ? 'Connecting to your AI therapist...'
-                : 'Preparing your therapeutic session...'
+            {isJoiningCall 
+              ? 'Joining your therapy session...'
+              : 'Preparing your therapeutic session...'
             }
           </p>
           <div className="bg-blue-500/20 backdrop-blur-sm rounded-xl p-4 border border-blue-400/30">
@@ -394,14 +345,6 @@ export const Conversation: React.FC = () => {
               ✨ Setting up video and audio for conversation
             </p>
           </div>
-          
-          {creationAttempts > 1 && (
-            <div className="mt-4 bg-yellow-500/20 backdrop-blur-sm rounded-xl p-3 border border-yellow-400/30">
-              <p className="text-yellow-200 text-xs">
-                Retrying connection... Please wait
-              </p>
-            </div>
-          )}
         </motion.div>
       </div>
     );
