@@ -5,8 +5,8 @@ import { performanceMonitor } from "@/utils/performance";
 import { analytics } from "@/utils/analytics";
 
 export const endConversation = async (
-  token: string | null,
   conversationId: string,
+  token?: string,
 ) => {
   const apiToken = token || config.tavusApiKey;
   

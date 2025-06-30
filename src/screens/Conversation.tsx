@@ -12,7 +12,6 @@ import { conversationAtom } from "@/store/conversation";
 import { useAtom, useAtomValue } from "jotai";
 import { screenAtom } from "@/store/screens";
 import { Button } from "@/components/ui/button";
-import { endConversation } from "@/api/endConversation";
 import {
   MicIcon,
   MicOffIcon,
@@ -22,12 +21,10 @@ import {
   Heart,
   Volume2,
   HelpCircle,
-  Zap,
   AlertTriangle,
   MessageCircle
 } from "lucide-react";
 import { apiTokenAtom } from "@/store/tokens";
-import { ConversationStatus } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 
 export const Conversation: React.FC = () => {
@@ -40,14 +37,11 @@ export const Conversation: React.FC = () => {
   const [sessionTime, setSessionTime] = useState(0);
   const [sessionStartTime] = useState(Date.now());
   const [showControls, setShowControls] = useState(true);
-  const [connectionQuality, setConnectionQuality] = useState<'good' | 'fair' | 'poor'>('good');
   const [isTherapistSpeaking, setIsTherapistSpeaking] = useState(false);
   const [showHelpTips, setShowHelpTips] = useState(false);
   const [hasEnabledMic, setHasEnabledMic] = useState(false);
   const [therapistJoined, setTherapistJoined] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
-  const [waitingForTherapist, setWaitingForTherapist] = useState(true);
-  const [showInteractionPrompt, setShowInteractionPrompt] = useState(false);
 
   const daily = useDaily();
   const localSessionId = useLocalSessionId();
@@ -106,7 +100,6 @@ export const Conversation: React.FC = () => {
           url: conversationUrl,
           startVideoOff: false,
           startAudioOff: false,
-          // Ensure optimal settings for AI interaction
           userName: "Therapy Client",
         });
         
@@ -142,7 +135,6 @@ export const Conversation: React.FC = () => {
     if (remoteParticipantIds.length > 0 && !therapistJoined) {
       console.log("AI therapist has joined the session!");
       setTherapistJoined(true);
-      setWaitingForTherapist(false);
       
       // Ensure microphone is enabled when therapist joins
       if (daily && !hasEnabledMic) {
@@ -151,23 +143,16 @@ export const Conversation: React.FC = () => {
         console.log("Microphone enabled for AI therapist interaction");
       }
       
-      // Mark session as ready and show interaction prompt
+      // Mark session as ready
       setTimeout(() => {
         setSessionReady(true);
-        setShowInteractionPrompt(true);
         console.log("Session is fully ready - AI therapist should start speaking");
-        
-        // Hide interaction prompt after a few seconds
-        setTimeout(() => {
-          setShowInteractionPrompt(false);
-        }, 8000);
-      }, 3000);
+      }, 2000);
       
     } else if (remoteParticipantIds.length === 0 && therapistJoined) {
       console.log("AI therapist has left the session");
       setTherapistJoined(false);
       setSessionReady(false);
-      setWaitingForTherapist(true);
     }
   }, [remoteParticipantIds, therapistJoined, daily, hasEnabledMic]);
 
@@ -205,6 +190,25 @@ export const Conversation: React.FC = () => {
     }
   }, [daily, isMicEnabled]);
 
+  const endConversation = async (conversationId: string) => {
+    try {
+      const response = await fetch(`https://tavusapi.com/v2/conversations/${conversationId}/end`, {
+        method: "POST",
+        headers: {
+          "x-api-key": token!,
+        },
+      });
+
+      if (!response.ok) {
+        console.error("Failed to end conversation:", response.status);
+      } else {
+        console.log("Conversation ended successfully");
+      }
+    } catch (error) {
+      console.error("Error ending conversation:", error);
+    }
+  };
+
   const leaveConversation = useCallback(async () => {
     const sessionDuration = Math.floor((Date.now() - sessionStartTime) / 1000);
     
@@ -219,8 +223,7 @@ export const Conversation: React.FC = () => {
     // End the conversation via API if we have the necessary data
     if (conversationId && token) {
       try {
-        await endConversation(conversationId, token);
-        console.log('Conversation ended successfully');
+        await endConversation(conversationId);
       } catch (error) {
         console.error('Failed to end conversation:', error);
         // Don't block the user from leaving even if API call fails
@@ -239,10 +242,6 @@ export const Conversation: React.FC = () => {
     setHasEnabledMic(false);
     setTherapistJoined(false);
     setSessionReady(false);
-    setWaitingForTherapist(true);
-    setShowInteractionPrompt(false);
-    
-    // The useEffect will handle rejoining
   }, []);
 
   const formatTime = (seconds: number) => {
@@ -257,9 +256,7 @@ export const Conversation: React.FC = () => {
     "Speak naturally and clearly - the AI is trained to understand conversational speech",
     "The AI can see your facial expressions and body language through the video",
     "If the AI seems unresponsive, check your microphone and try speaking louder",
-    "Wait for the AI to finish speaking before responding, just like a real conversation",
-    "If you have technical issues, try the retry button or refresh the page",
-    "The AI should ask you questions - respond out loud to continue the conversation"
+    "Wait for the AI to finish speaking before responding, just like a real conversation"
   ];
 
   // Add timeout for loading state
@@ -267,10 +264,10 @@ export const Conversation: React.FC = () => {
     const timeout = setTimeout(() => {
       if (isLoading && !error) {
         console.log("Session connection taking longer than expected");
-        setError("Connection is taking longer than expected. The AI therapist may be busy. Please try again.");
+        setError("Connection is taking longer than expected. Please try again.");
         setIsLoading(false);
       }
-    }, 45000); // 45 second timeout
+    }, 30000); // 30 second timeout
 
     return () => clearTimeout(timeout);
   }, [isLoading, error]);
@@ -315,16 +312,6 @@ export const Conversation: React.FC = () => {
           <h2 className="text-xl font-bold text-red-400 mb-4">Connection Issue</h2>
           <p className="text-white mb-6 text-sm">{error}</p>
           
-          <div className="bg-yellow-500/20 backdrop-blur-sm rounded-xl p-4 mb-6 border border-yellow-400/30">
-            <p className="text-yellow-200 text-sm">
-              <strong>Troubleshooting:</strong><br/>
-              • Check your internet connection<br/>
-              • Ensure camera/microphone permissions are granted<br/>
-              • The AI therapist may be busy - try again in a moment<br/>
-              • Try refreshing the page if the issue persists
-            </p>
-          </div>
-          
           <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
             <button
               onClick={retryConnection}
@@ -344,7 +331,7 @@ export const Conversation: React.FC = () => {
     );
   }
 
-  if (isLoading || waitingForTherapist) {
+  if (isLoading || !therapistJoined) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black p-4">
         <motion.div 
@@ -360,12 +347,12 @@ export const Conversation: React.FC = () => {
             <Heart className="w-8 h-8 text-white" />
           </motion.div>
           <h2 className="text-2xl font-bold text-white mb-4">
-            {waitingForTherapist ? 'Waiting for AI Therapist' : 'Connecting to Your AI Therapist'}
+            {!therapistJoined ? 'Waiting for AI Therapist' : 'Connecting to Your AI Therapist'}
           </h2>
           <p className="text-white/80 mb-4">
             {isJoiningCall 
               ? 'Joining your therapy session...'
-              : waitingForTherapist
+              : !therapistJoined
               ? 'Your AI therapist is joining the session...'
               : 'Preparing your therapeutic session...'
             }
@@ -446,27 +433,6 @@ export const Conversation: React.FC = () => {
           </div>
         </motion.div>
       )}
-
-      {/* Interaction Prompt */}
-      <AnimatePresence>
-        {showInteractionPrompt && sessionReady && isMicEnabled && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="absolute top-20 left-1/2 transform -translate-x-1/2 z-30"
-          >
-            <div className="bg-green-500/90 backdrop-blur-sm rounded-xl px-6 py-3 border border-green-400/50">
-              <div className="flex items-center gap-3">
-                <MessageCircle className="w-5 h-5 text-green-100" />
-                <p className="text-green-100 font-medium">
-                  Your AI therapist should greet you now - listen for their voice!
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Help Tips Modal */}
       <AnimatePresence>

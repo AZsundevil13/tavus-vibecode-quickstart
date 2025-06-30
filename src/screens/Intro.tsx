@@ -3,7 +3,6 @@ import { useAtom } from "jotai";
 import { screenAtom } from "@/store/screens";
 import { apiTokenAtom } from "@/store/tokens";
 import { conversationAtom } from "@/store/conversation";
-import { createPersistentConversation } from "@/api/createPersistentConversation";
 import { motion } from "framer-motion";
 import { Heart, Shield, Clock, Users, Brain, Sparkles, AlertTriangle } from "lucide-react";
 import { ConversationStatus } from "@/types";
@@ -24,19 +23,42 @@ export const Intro: React.FC = () => {
     }
   }, [token, setToken]);
 
+  const createConversation = async () => {
+    const response = await fetch("https://tavusapi.com/v2/conversations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": token!,
+      },
+      body: JSON.stringify({
+        replica_id: "r91c80eca351",
+        conversation_name: "AI Therapy Session",
+        conversational_context: "You are a compassionate AI therapist. Greet the user warmly and ask how they're feeling today. Listen actively and provide supportive responses. Ask follow-up questions to understand their concerns better.",
+        custom_greeting: "Hello! I'm your AI therapist. I'm here to listen and support you. How are you feeling today?"
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to create conversation: ${response.status} - ${errorText}`);
+    }
+
+    return response.json();
+  };
+
   const handleStartChat = async () => {
     setIsStarting(true);
     setError(null);
     
     try {
-      console.log("Creating new therapy session...");
+      console.log("Creating therapy session...");
       
       if (!token) {
         throw new Error("API token is required");
       }
       
-      // Create a new persistent conversation using the API
-      const conversationData = await createPersistentConversation(token);
+      // Create conversation using simple API call
+      const conversationData = await createConversation();
       
       console.log("Created conversation:", conversationData);
       
@@ -52,7 +74,7 @@ export const Intro: React.FC = () => {
       // Navigate to conversation screen
       setTimeout(() => {
         setScreenState({ currentScreen: "conversation" });
-      }, 1500);
+      }, 1000);
       
     } catch (error) {
       console.error("Failed to start therapy session:", error);
@@ -262,72 +284,6 @@ export const Intro: React.FC = () => {
               <p className="text-white/70 leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
-        </motion.div>
-
-        {/* How It Works */}
-        <motion.div 
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="bg-gradient-to-r from-green-500/20 to-blue-500/20 backdrop-blur-sm rounded-3xl p-8 border border-green-400/30 mb-16"
-        >
-          <div className="text-center">
-            <Clock className="w-12 h-12 text-green-400 mx-auto mb-4" />
-            <h2 className="text-3xl font-bold text-white mb-4">How It Works</h2>
-            <p className="text-green-100/90 text-lg mb-6 max-w-3xl mx-auto">
-              We create a secure, personalized therapy session just for you. 
-              Each session is private and connects you directly with your AI therapist.
-            </p>
-            <div className="grid md:grid-cols-3 gap-4 text-sm">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                <div className="w-8 h-8 bg-green-400 text-black rounded-full flex items-center justify-center mx-auto mb-2 font-bold">1</div>
-                <p className="text-green-200 font-semibold">Click Start Session</p>
-                <p className="text-green-100/80">One simple button to begin</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                <div className="w-8 h-8 bg-green-400 text-black rounded-full flex items-center justify-center mx-auto mb-2 font-bold">2</div>
-                <p className="text-green-200 font-semibold">Create Session</p>
-                <p className="text-green-100/80">Secure room created for you</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                <div className="w-8 h-8 bg-green-400 text-black rounded-full flex items-center justify-center mx-auto mb-2 font-bold">3</div>
-                <p className="text-green-200 font-semibold">Begin Healing</p>
-                <p className="text-green-100/80">Start your therapeutic conversation</p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Therapeutic Approaches */}
-        <motion.div 
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.8 }}
-          className="bg-white/5 backdrop-blur-sm rounded-3xl p-8 border border-white/10 mb-16"
-        >
-          <h2 className="text-3xl font-bold text-white mb-6 text-center">Evidence-Based Therapeutic Modalities</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              "Cognitive Behavioral Therapy (CBT)",
-              "Dialectical Behavior Therapy (DBT)", 
-              "EMDR Trauma Processing",
-              "Internal Family Systems (IFS)",
-              "Somatic Experiencing",
-              "Mindfulness-Based Interventions",
-              "Acceptance & Commitment Therapy",
-              "Narrative Therapy Techniques"
-            ].map((approach, index) => (
-              <motion.div
-                key={approach}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 1 + index * 0.1 }}
-                className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20"
-              >
-                <p className="text-white/90 font-medium text-center">{approach}</p>
-              </motion.div>
-            ))}
-          </div>
         </motion.div>
 
         {/* Crisis Support Notice */}
