@@ -26,7 +26,24 @@ export default defineConfig({
             ? `assets/[name].[ext]`
             : `assets/[name]-[hash].[ext]`;
         },
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          daily: ['@daily-co/daily-js', '@daily-co/daily-react'],
+          ui: ['framer-motion', 'lucide-react', '@radix-ui/react-slot'],
+        },
       },
     },
+    sourcemap: false, // Disable in production for security
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.log in production
+        drop_debugger: true,
+      },
+    },
+  },
+  define: {
+    // Remove development-only code in production
+    __DEV__: JSON.stringify(process.env.NODE_ENV !== 'production'),
   },
 });

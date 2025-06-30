@@ -31,6 +31,10 @@ import { apiTokenAtom } from "@/store/tokens";
 import { ConversationStatus } from "@/types";
 import { quantum } from 'ldrs';
 import { motion, AnimatePresence } from "framer-motion";
+import { logger } from "@/utils/logger";
+import { analytics } from "@/utils/analytics";
+import { performanceMonitor } from "@/utils/performance";
+import { SecurityUtils } from "@/utils/security";
 
 quantum.register();
 
@@ -42,6 +46,7 @@ export const Conversation: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isJoiningCall, setIsJoiningCall] = useState(false);
   const [sessionTime, setSessionTime] = useState(0);
+  const [sessionStartTime] = useState(Date.now());
   const [showControls, setShowControls] = useState(true);
   const [connectionQuality, setConnectionQuality] = useState<'good' | 'fair' | 'poor'>('good');
   const [isTherapistSpeaking, setIsTherapistSpeaking] = useState(false);
@@ -86,35 +91,81 @@ export const Conversation: React.FC = () => {
   // Redirect to intro if no conversation exists
   useEffect(() => {
     if (!conversation) {
-      console.log("No conversation found, redirecting to intro");
+      logger.warn('No conversation found, redirecting to intro');
       setScreenState({ currentScreen: "intro" });
       return;
     }
   }, [conversation, setScreenState]);
 
+  // Track page view and session start
+  useEffect(() => {
+    if (conversation) {
+      analytics.trackPageView('/conversation');
+      logger.info('Conversation screen loaded', { 
+        conversationId: conversation.conversation_id 
+      });
+    }
+  }, [conversation]);
+
   useEffect(() => {
     if (!conversation?.conversation_url || !daily || isJoiningCall) return;
+
+    // Validate conversation URL before joining
+    if (!SecurityUtils.validateConversationUrl(conversation.conversation_url)) {
+      const error = 'Invalid conversation URL';
+      logger.error('Invalid conversation URL detected', { 
+        url: conversation.conversation_url 
+      });
+      setError(error);
+      analytics.trackError('invalid_conversation_url', 'conversation');
+      return;
+    }
 
     const joinCall = async () => {
       setIsJoiningCall(true);
       
       try {
-        console.log("Joining therapy session with URL:", conversation.conversation_url);
-        
-        await daily.join({
-          url: conversation.conversation_url,
-          startVideoOff: false,
-          startAudioOff: true,
+        logger.info('Joining therapy session', { 
+          conversationId: conversation.conversation_id,
+          url: conversation.conversation_url 
         });
         
-        console.log("Successfully joined therapy session");
+        await performanceMonitor.measureAsync('daily_join_call', async () => {
+          return daily.join({
+            url: conversation.conversation_url,
+            startVideoOff: false,
+            startAudioOff: true,
+          });
+        });
+        
+        logger.info('Successfully joined therapy session');
         daily.setLocalVideo(true);
         daily.setLocalAudio(false);
         setIsLoading(false);
         setError(null);
+        
+        analytics.trackEvent({
+          action: 'video_call_joined',
+          category: 'therapy',
+          label: 'ai_therapy_session',
+        });
       } catch (error) {
-        console.error("Failed to join therapy session:", error);
-        setError(`Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Failed to join therapy session', { error, conversationId: conversation.conversation_id });
+        
+        analytics.trackError('video_call_join_failed', 'conversation');
+        
+        // Provide user-friendly error messages
+        let userErrorMessage = errorMessage;
+        if (errorMessage.includes('does not exist')) {
+          userErrorMessage = 'The therapy session is no longer available. Please start a new session.';
+        } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+          userErrorMessage = 'Network connection issue. Please check your internet and try again.';
+        } else {
+          userErrorMessage = 'Unable to connect to the therapy session. Please try again.';
+        }
+        
+        setError(userErrorMessage);
         setIsLoading(false);
       } finally {
         setIsJoiningCall(false);
@@ -128,10 +179,32 @@ export const Conversation: React.FC = () => {
     if (remoteParticipantIds.length && !localAudio.isOff) return;
     
     if (remoteParticipantIds.length) {
-      console.log("AI therapist joined, enabling audio");
+      logger.info('AI therapist joined, enabling audio');
       setTimeout(() => daily?.setLocalAudio(true), 2000);
     }
   }, [remoteParticipantIds, daily, localAudio.isOff]);
+
+  // Monitor connection quality
+  useEffect(() => {
+    if (!daily) return;
+
+    const handleNetworkQualityChange = (event: any) => {
+      const quality = event.quality;
+      if (quality > 3) {
+        setConnectionQuality('good');
+      } else if (quality > 1) {
+        setConnectionQuality('fair');
+      } else {
+        setConnectionQuality('poor');
+      }
+    };
+
+    daily.on('network-quality-change', handleNetworkQualityChange);
+
+    return () => {
+      daily.off('network-quality-change', handleNetworkQualityChange);
+    };
+  }, [daily]);
 
   // Monitor audio levels for speaking indicator
   useEffect(() => {
@@ -147,26 +220,62 @@ export const Conversation: React.FC = () => {
 
   const toggleVideo = useCallback(() => {
     daily?.setLocalVideo(!isCameraEnabled);
+    analytics.trackEvent({
+      action: isCameraEnabled ? 'video_disabled' : 'video_enabled',
+      category: 'therapy',
+      label: 'video_controls',
+    });
   }, [daily, isCameraEnabled]);
 
   const toggleAudio = useCallback(() => {
     daily?.setLocalAudio(!isMicEnabled);
+    analytics.trackEvent({
+      action: isMicEnabled ? 'audio_disabled' : 'audio_enabled',
+      category: 'therapy',
+      label: 'audio_controls',
+    });
   }, [daily, isMicEnabled]);
 
   const leaveConversation = useCallback(() => {
+    const sessionDuration = Math.floor((Date.now() - sessionStartTime) / 1000);
+    
+    logger.info('Leaving conversation', { 
+      conversationId: conversation?.conversation_id,
+      sessionDuration 
+    });
+    
     daily?.leave();
     daily?.destroy();
+    
     if (token && conversation?.conversation_id) {
-      endConversation(token, conversation.conversation_id);
+      endConversation(token, conversation.conversation_id).catch(error => {
+        logger.error('Failed to end conversation via API', error);
+      });
     }
+    
+    analytics.trackSessionEnd(sessionDuration);
+    analytics.trackEvent({
+      action: 'session_ended',
+      category: 'therapy',
+      label: 'user_initiated',
+      value: sessionDuration,
+    });
+    
     setConversation(null);
     setScreenState({ currentScreen: "finalScreen" });
-  }, [daily, token, conversation?.conversation_id, setConversation, setScreenState]);
+  }, [daily, token, conversation?.conversation_id, setConversation, setScreenState, sessionStartTime]);
 
   const retryConnection = useCallback(() => {
+    logger.info('Retrying connection');
     setIsLoading(true);
     setError(null);
     setIsJoiningCall(false);
+    
+    analytics.trackEvent({
+      action: 'connection_retry',
+      category: 'therapy',
+      label: 'user_initiated',
+    });
   }, []);
 
   const formatTime = (seconds: number) => {

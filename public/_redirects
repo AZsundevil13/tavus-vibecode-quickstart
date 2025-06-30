@@ -1,0 +1,8 @@
+# Netlify redirects file
+# Handle client-side routing
+/*    /index.html   200
+
+# Security redirects
+/admin/*  https://example.com/404  301
+/.env     https://example.com/404  301
+/.git/*   https://example.com/404  301

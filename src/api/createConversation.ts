@@ -1,11 +1,41 @@
 import { IConversation } from "@/types";
+import { config } from "@/config/environment";
+import { logger } from "@/utils/logger";
+import { SecurityUtils, apiRateLimiter } from "@/utils/security";
+import { performanceMonitor } from "@/utils/performance";
+import { analytics } from "@/utils/analytics";
 
 export const createConversation = async (
-  token: string,
+  token?: string,
 ): Promise<IConversation> => {
+  // Use token from parameter or config
+  const apiToken = token || config.tavusApiKey;
   
+  if (!apiToken) {
+    const error = new Error('API token is required');
+    logger.error('Missing API token for conversation creation');
+    analytics.trackError('missing_api_token', 'createConversation');
+    throw error;
+  }
+
+  // Validate API token
+  if (!SecurityUtils.validateApiToken(apiToken)) {
+    const error = new Error('Invalid API token format');
+    logger.error('Invalid API token format');
+    analytics.trackError('invalid_api_token', 'createConversation');
+    throw error;
+  }
+
+  // Check rate limiting
+  if (!apiRateLimiter.canMakeCall()) {
+    const error = new Error('Rate limit exceeded. Please try again later.');
+    logger.warn('API rate limit exceeded for conversation creation');
+    analytics.trackError('rate_limit_exceeded', 'createConversation');
+    throw error;
+  }
+
   const payload = {
-    replica_id: "r91c80eca351", // Using your provided replica ID
+    replica_id: config.tavusReplicaId,
     conversation_name: "Therapeutic Session",
     conversational_context: `COMPREHENSIVE THERAPEUTIC AI CONTEXT
 
@@ -317,22 +347,59 @@ SAMPLE CLOSING STATEMENTS:
 This is your comprehensive therapeutic framework. Embody these principles with genuine care, professional competence, and unwavering hope for each person's healing journey.`
   };
   
-  const response = await fetch("https://tavusapi.com/v2/conversations", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": token ?? "",
-    },
-    body: JSON.stringify(payload),
-  });
+  try {
+    logger.info('Creating conversation with Tavus API');
+    
+    const response = await performanceMonitor.measureAsync('tavus_api_create_conversation', async () => {
+      return fetch("https://tavusapi.com/v2/conversations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiToken,
+        },
+        body: JSON.stringify(payload),
+      });
+    });
 
-  if (!response?.ok) {
-    const errorText = await response.text();
-    console.error(`API Error: ${response.status} - ${errorText}`);
-    throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response?.ok) {
+      const errorText = await response.text();
+      const error = new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      
+      logger.error('Tavus API conversation creation failed', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+      });
+      
+      analytics.trackError('api_conversation_creation_failed', 'createConversation');
+      throw error;
+    }
+
+    const data = await response.json();
+    
+    // Validate conversation URL
+    if (data.conversation_url && !SecurityUtils.validateConversationUrl(data.conversation_url)) {
+      const error = new Error('Invalid conversation URL received from API');
+      logger.error('Invalid conversation URL from Tavus API', { url: data.conversation_url });
+      analytics.trackError('invalid_conversation_url', 'createConversation');
+      throw error;
+    }
+
+    logger.info('Conversation created successfully', {
+      conversationId: data.conversation_id,
+      status: data.status,
+    });
+    
+    analytics.trackEvent({
+      action: 'conversation_created',
+      category: 'therapy',
+      label: 'ai_therapy_conversation',
+    });
+
+    return data;
+  } catch (error) {
+    logger.error('Failed to create conversation', error);
+    analytics.trackError('conversation_creation_error', 'createConversation');
+    throw error;
   }
-
-  const data = await response.json();
-  console.log("New conversation created:", data);
-  return data;
 };

@@ -6,26 +6,41 @@ import { conversationAtom } from "@/store/conversation";
 import { createConversation } from "@/api/createConversation";
 import { motion } from "framer-motion";
 import { Heart, Shield, Clock, Users, Brain, Sparkles } from "lucide-react";
+import { logger } from "@/utils/logger";
+import { analytics } from "@/utils/analytics";
+import { performanceMonitor } from "@/utils/performance";
+import { conversationRateLimiter } from "@/utils/security";
 
 export const Intro: React.FC = () => {
   const [, setScreenState] = useAtom(screenAtom);
-  const [token, setToken] = useAtom(apiTokenAtom);
+  const [token] = useAtom(apiTokenAtom);
   const [, setConversation] = useAtom(conversationAtom);
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Set the default API key only if no token exists
   React.useEffect(() => {
-    if (!token) {
-      const defaultToken = "4ab068e8f422479b9f7143ff8db3ae1a";
-      setToken(defaultToken);
-      localStorage.setItem('tavus-token', defaultToken);
-    }
-  }, [token, setToken]);
+    // Track page view
+    analytics.trackPageView('/intro');
+    
+    // Log memory usage in development
+    performanceMonitor.logMemoryUsage();
+  }, []);
 
   const handleStartChat = async () => {
     if (!token) {
-      setError("API token is required");
+      const errorMsg = "API token is required to start a session";
+      setError(errorMsg);
+      logger.error('Missing API token on session start');
+      analytics.trackError('missing_token_session_start', 'intro');
+      return;
+    }
+
+    // Check rate limiting
+    if (!conversationRateLimiter.canMakeCall()) {
+      const errorMsg = "Too many session attempts. Please wait a few minutes before trying again.";
+      setError(errorMsg);
+      logger.warn('Conversation rate limit exceeded');
+      analytics.trackError('conversation_rate_limit', 'intro');
       return;
     }
 
@@ -33,18 +48,47 @@ export const Intro: React.FC = () => {
     setError(null);
     
     try {
-      console.log("Creating conversation with token:", token);
-      const conversation = await createConversation(token);
-      console.log("Conversation created:", conversation);
+      logger.info('Starting therapy session creation');
+      analytics.trackEvent({
+        action: 'session_start_attempt',
+        category: 'therapy',
+        label: 'ai_therapy_session',
+      });
+
+      const conversation = await performanceMonitor.measureAsync('create_conversation_flow', async () => {
+        return createConversation(token);
+      });
+      
+      logger.info('Conversation created successfully', { 
+        conversationId: conversation.conversation_id 
+      });
       
       // Store the conversation in the atom
       setConversation(conversation);
       
+      analytics.trackSessionStart();
+      
       // Navigate to conversation screen
       setScreenState({ currentScreen: "conversation" });
     } catch (error) {
-      console.error("Failed to create conversation:", error);
-      setError(`Failed to start session: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      logger.error('Failed to create conversation', error);
+      
+      analytics.trackError('conversation_creation_failed', 'intro');
+      
+      // Provide user-friendly error messages
+      let userErrorMessage = errorMessage;
+      if (errorMessage.includes('rate limit')) {
+        userErrorMessage = 'Too many requests. Please wait a moment and try again.';
+      } else if (errorMessage.includes('token')) {
+        userErrorMessage = 'Authentication error. Please check your API configuration.';
+      } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        userErrorMessage = 'Network error. Please check your connection and try again.';
+      } else {
+        userErrorMessage = 'Unable to start session. Please try again in a moment.';
+      }
+      
+      setError(userErrorMessage);
       setIsStarting(false);
     }
   };
@@ -181,7 +225,7 @@ export const Intro: React.FC = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleStartChat}
-              disabled={isStarting}
+              disabled={isStarting || !token}
               className="px-12 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white text-xl font-semibold rounded-2xl transition-all duration-300 shadow-2xl hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Begin Your Healing Journey
@@ -190,6 +234,20 @@ export const Intro: React.FC = () => {
             {error && (
               <div className="mt-6 p-4 bg-red-500/20 border border-red-400/30 rounded-lg max-w-md mx-auto">
                 <p className="text-red-200 text-sm">{error}</p>
+                <button
+                  onClick={() => setError(null)}
+                  className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            {!token && (
+              <div className="mt-6 p-4 bg-yellow-500/20 border border-yellow-400/30 rounded-lg max-w-md mx-auto">
+                <p className="text-yellow-200 text-sm">
+                  API configuration required. Please check your environment settings.
+                </p>
               </div>
             )}
           </div>

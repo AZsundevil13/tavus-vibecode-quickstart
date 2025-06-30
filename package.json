@@ -6,8 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:production": "NODE_ENV=production npm run build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "lint:fix": "eslint . --ext ts,tsx --fix",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit",
+    "analyze": "npm run build && npx vite-bundle-analyzer dist/assets/*.js",
+    "security-audit": "npm audit --audit-level moderate",
+    "test": "echo 'No tests specified' && exit 0"
   },
   "dependencies": {
     "@daily-co/daily-js": "^0.73.0",
@@ -44,6 +50,11 @@
     "prettier-plugin-tailwindcss": "^0.5.14",
     "tailwindcss": "^3.4.5",
     "typescript": "^5.5.4",
-    "vite": "^5.4.4"
+    "vite": "^5.4.4",
+    "vite-bundle-analyzer": "^0.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }
