@@ -90,6 +90,7 @@ export const Conversation: React.FC = () => {
   const createNewSession = async () => {
     try {
       setIsLoading(true);
+      setError(null);
       console.log("Creating new persistent conversation session");
       
       const newConversation = await createPersistentConversation(token || undefined);
@@ -118,12 +119,12 @@ export const Conversation: React.FC = () => {
         await daily.join({
           url: conversationUrl,
           startVideoOff: false,
-          startAudioOff: false, // Start with audio ON
+          startAudioOff: false, // Start with audio ON for interaction
         });
         
         console.log("Successfully joined therapy session");
         
-        // Ensure both video and audio are enabled
+        // Ensure both video and audio are enabled for proper interaction
         daily.setLocalVideo(true);
         daily.setLocalAudio(true);
         
@@ -131,7 +132,7 @@ export const Conversation: React.FC = () => {
         setError(null);
         setHasEnabledMic(true);
         
-        console.log("Audio and video enabled for therapy session");
+        console.log("Audio and video enabled - ready for AI therapist interaction");
       } catch (error) {
         console.error("Failed to join therapy session:", error);
         setError(`Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -147,7 +148,7 @@ export const Conversation: React.FC = () => {
   // Ensure microphone is enabled when AI therapist joins
   useEffect(() => {
     if (remoteParticipantIds.length > 0 && daily && !hasEnabledMic) {
-      console.log("AI therapist joined, ensuring microphone is enabled");
+      console.log("AI therapist joined, ensuring microphone is enabled for interaction");
       
       // Enable microphone immediately when therapist joins
       daily.setLocalAudio(true);
@@ -155,7 +156,7 @@ export const Conversation: React.FC = () => {
       
       // Show a brief notification that the session is ready
       setTimeout(() => {
-        console.log("Session is ready for conversation");
+        console.log("Session is ready - AI therapist can now see and hear you");
       }, 1000);
     }
   }, [remoteParticipantIds, daily, hasEnabledMic]);
@@ -184,7 +185,7 @@ export const Conversation: React.FC = () => {
       setHasEnabledMic(true);
       console.log("Microphone enabled - you can now speak to the AI therapist");
     } else {
-      console.log("Microphone disabled");
+      console.log("Microphone disabled - AI therapist cannot hear you");
     }
   }, [daily, isMicEnabled]);
 
@@ -228,10 +229,10 @@ export const Conversation: React.FC = () => {
   };
 
   const helpTips = [
-    "Speak naturally - your AI therapist is trained to listen and respond with empathy",
-    "Make sure your microphone is enabled (green microphone icon) to start the conversation",
-    "This is a persistent session - your AI therapist is always here when you need support",
-    "It's okay to take pauses - silence is part of the therapeutic process",
+    "Speak naturally - your AI therapist can see and hear you, and will respond to what you say",
+    "Make sure your microphone is enabled (green microphone icon) so the AI therapist can hear you",
+    "The AI therapist will greet you first and ask how you're feeling - respond naturally",
+    "It's okay to take pauses - the AI therapist will wait for you to speak",
     "Share what feels comfortable - you control the pace and depth of conversation",
     "If you feel overwhelmed, let your therapist know - they can guide you through grounding exercises",
     "This is your safe space - there's no judgment here, only support and understanding"
@@ -302,7 +303,7 @@ export const Conversation: React.FC = () => {
               </p>
             </div>
             <p className="text-blue-200 text-xs">
-              ✨ Setting up secure, confidential environment
+              ✨ Setting up secure, interactive environment
             </p>
           </div>
         </motion.div>
@@ -364,7 +365,7 @@ export const Conversation: React.FC = () => {
             <div className="flex items-center gap-3">
               <MicOffIcon className="w-5 h-5 text-orange-100" />
               <p className="text-orange-100 font-medium">
-                Enable your microphone to start talking with your AI therapist
+                Enable your microphone so the AI therapist can hear you
               </p>
             </div>
           </div>
