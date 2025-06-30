@@ -23,7 +23,8 @@ import {
   Heart,
   Volume2,
   HelpCircle,
-  Zap
+  Zap,
+  AlertTriangle
 } from "lucide-react";
 import { apiTokenAtom } from "@/store/tokens";
 import { ConversationStatus } from "@/types";
@@ -43,6 +44,8 @@ export const Conversation: React.FC = () => {
   const [isTherapistSpeaking, setIsTherapistSpeaking] = useState(false);
   const [showHelpTips, setShowHelpTips] = useState(false);
   const [hasEnabledMic, setHasEnabledMic] = useState(false);
+  const [therapistJoined, setTherapistJoined] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
 
   const daily = useDaily();
   const localSessionId = useLocalSessionId();
@@ -65,12 +68,12 @@ export const Conversation: React.FC = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowControls(false);
-    }, 5000);
+    }, 8000); // Longer timeout for better UX
 
     const handleMouseMove = () => {
       setShowControls(true);
       clearTimeout(timer);
-      setTimeout(() => setShowControls(false), 5000);
+      setTimeout(() => setShowControls(false), 8000);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -80,30 +83,31 @@ export const Conversation: React.FC = () => {
     };
   }, [showControls]);
 
-  // Set up the conversation object - always create a new session if none exists
+  // Create conversation if none exists
   useEffect(() => {
-    if (!conversation) {
+    if (!conversation && !isLoading) {
       createNewSession();
     }
-  }, [conversation, setConversation]);
+  }, [conversation]);
 
   const createNewSession = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      console.log("Creating new persistent conversation session");
+      console.log("Creating new AI therapy conversation session");
       
       const newConversation = await createPersistentConversation(token || undefined);
       setConversation(newConversation);
       
-      console.log("New persistent session created:", newConversation);
+      console.log("New AI therapy session created:", newConversation);
     } catch (error) {
-      console.error("Failed to create new session:", error);
+      console.error("Failed to create AI therapy session:", error);
       setError(`Failed to create session: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setIsLoading(false);
     }
   };
 
+  // Join the conversation when URL is available
   useEffect(() => {
     const conversationUrl = conversation?.conversation_url;
     
@@ -113,28 +117,27 @@ export const Conversation: React.FC = () => {
       setIsJoiningCall(true);
       
       try {
-        console.log("Joining therapy session with URL:", conversationUrl);
-        console.log("Session type: Persistent (Always Available)");
+        console.log("Joining AI therapy session with URL:", conversationUrl);
         
         await daily.join({
           url: conversationUrl,
           startVideoOff: false,
-          startAudioOff: false, // Start with audio ON for interaction
+          startAudioOff: false, // Critical: Start with audio ON so AI can hear you
         });
         
-        console.log("Successfully joined therapy session");
+        console.log("Successfully joined AI therapy session");
         
-        // Ensure both video and audio are enabled for proper interaction
-        daily.setLocalVideo(true);
-        daily.setLocalAudio(true);
+        // Ensure both video and audio are enabled immediately
+        await daily.setLocalVideo(true);
+        await daily.setLocalAudio(true);
         
         setIsLoading(false);
         setError(null);
         setHasEnabledMic(true);
         
-        console.log("Audio and video enabled - ready for AI therapist interaction");
+        console.log("Audio and video enabled - AI therapist can now see and hear you");
       } catch (error) {
-        console.error("Failed to join therapy session:", error);
+        console.error("Failed to join AI therapy session:", error);
         setError(`Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}`);
         setIsLoading(false);
       } finally {
@@ -145,47 +148,62 @@ export const Conversation: React.FC = () => {
     joinCall();
   }, [conversation?.conversation_url, daily, isJoiningCall]);
 
-  // Ensure microphone is enabled when AI therapist joins
+  // Monitor when AI therapist joins and ensure proper setup
   useEffect(() => {
-    if (remoteParticipantIds.length > 0 && daily && !hasEnabledMic) {
-      console.log("AI therapist joined, ensuring microphone is enabled for interaction");
+    if (remoteParticipantIds.length > 0 && !therapistJoined) {
+      console.log("AI therapist has joined the session");
+      setTherapistJoined(true);
       
-      // Enable microphone immediately when therapist joins
-      daily.setLocalAudio(true);
-      setHasEnabledMic(true);
+      // Ensure microphone is enabled when therapist joins
+      if (daily && !hasEnabledMic) {
+        daily.setLocalAudio(true);
+        setHasEnabledMic(true);
+        console.log("Microphone enabled for AI therapist interaction");
+      }
       
-      // Show a brief notification that the session is ready
+      // Mark session as ready after a brief delay
       setTimeout(() => {
-        console.log("Session is ready - AI therapist can now see and hear you");
-      }, 1000);
+        setSessionReady(true);
+        console.log("Session is ready - AI therapist can see and hear you, and will begin conversation");
+      }, 2000);
+    } else if (remoteParticipantIds.length === 0 && therapistJoined) {
+      console.log("AI therapist has left the session");
+      setTherapistJoined(false);
+      setSessionReady(false);
     }
-  }, [remoteParticipantIds, daily, hasEnabledMic]);
+  }, [remoteParticipantIds, therapistJoined, daily, hasEnabledMic]);
 
-  // Monitor audio levels for speaking indicator
+  // Monitor audio levels for speaking indicator (simplified)
   useEffect(() => {
-    if (!daily || !remoteParticipantIds.length) return;
+    if (!daily || !therapistJoined) return;
 
     const interval = setInterval(() => {
-      // Simulate speaking detection (in real implementation, you'd use actual audio level detection)
-      setIsTherapistSpeaking(Math.random() > 0.7);
-    }, 1000);
+      // Simple simulation - in real implementation you'd use actual audio level detection
+      setIsTherapistSpeaking(Math.random() > 0.8);
+    }, 2000);
 
     return () => clearInterval(interval);
-  }, [daily, remoteParticipantIds]);
+  }, [daily, therapistJoined]);
 
   const toggleVideo = useCallback(() => {
-    daily?.setLocalVideo(!isCameraEnabled);
+    if (daily) {
+      const newVideoState = !isCameraEnabled;
+      daily.setLocalVideo(newVideoState);
+      console.log(`Camera ${newVideoState ? 'enabled' : 'disabled'}`);
+    }
   }, [daily, isCameraEnabled]);
 
   const toggleAudio = useCallback(() => {
-    const newAudioState = !isMicEnabled;
-    daily?.setLocalAudio(newAudioState);
-    
-    if (newAudioState) {
-      setHasEnabledMic(true);
-      console.log("Microphone enabled - you can now speak to the AI therapist");
-    } else {
-      console.log("Microphone disabled - AI therapist cannot hear you");
+    if (daily) {
+      const newAudioState = !isMicEnabled;
+      daily.setLocalAudio(newAudioState);
+      setHasEnabledMic(newAudioState);
+      
+      if (newAudioState) {
+        console.log("Microphone enabled - AI therapist can now hear you");
+      } else {
+        console.log("Microphone disabled - AI therapist cannot hear you");
+      }
     }
   }, [daily, isMicEnabled]);
 
@@ -193,16 +211,15 @@ export const Conversation: React.FC = () => {
     const sessionDuration = Math.floor((Date.now() - sessionStartTime) / 1000);
     const conversationId = conversation?.conversation_id;
     
-    console.log('Leaving conversation', { 
+    console.log('Leaving AI therapy conversation', { 
       conversationId: conversationId,
       sessionDuration,
-      sessionType: 'persistent'
     });
     
     daily?.leave();
     daily?.destroy();
     
-    // Only end conversation if we have a token and conversation ID
+    // End conversation via API if we have the details
     if (token && conversationId) {
       endConversation(token, conversationId).catch(error => {
         console.error('Failed to end conversation via API', error);
@@ -214,12 +231,14 @@ export const Conversation: React.FC = () => {
   }, [daily, token, setConversation, setScreenState, sessionStartTime, conversation?.conversation_id]);
 
   const retryConnection = useCallback(() => {
-    console.log('Retrying connection');
+    console.log('Retrying AI therapy connection');
     setIsLoading(true);
     setError(null);
     setIsJoiningCall(false);
     setHasEnabledMic(false);
-    setConversation(null); // Reset conversation to trigger new session creation
+    setTherapistJoined(false);
+    setSessionReady(false);
+    setConversation(null); // This will trigger new session creation
   }, [setConversation]);
 
   const formatTime = (seconds: number) => {
@@ -229,13 +248,13 @@ export const Conversation: React.FC = () => {
   };
 
   const helpTips = [
-    "Speak naturally - your AI therapist can see and hear you, and will respond to what you say",
-    "Make sure your microphone is enabled (green microphone icon) so the AI therapist can hear you",
-    "The AI therapist will greet you first and ask how you're feeling - respond naturally",
-    "It's okay to take pauses - the AI therapist will wait for you to speak",
-    "Share what feels comfortable - you control the pace and depth of conversation",
-    "If you feel overwhelmed, let your therapist know - they can guide you through grounding exercises",
-    "This is your safe space - there's no judgment here, only support and understanding"
+    "The AI therapist can see and hear you - speak naturally when they ask questions",
+    "Make sure your microphone is enabled (green icon) so the AI can hear your responses",
+    "The AI therapist will greet you first and ask how you're feeling - respond out loud",
+    "If the AI seems unresponsive, check that your microphone is working and enabled",
+    "Speak clearly and at normal volume - the AI is trained to understand natural speech",
+    "It's okay to take pauses - the AI will wait for you to respond",
+    "If you have technical issues, try the retry button or refresh the page"
   ];
 
   if (error) {
@@ -247,10 +266,10 @@ export const Conversation: React.FC = () => {
           className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 border border-white/20 text-center max-w-md w-full"
         >
           <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-500/20 flex items-center justify-center">
-            <HelpCircle className="w-8 h-8 text-red-400" />
+            <AlertTriangle className="w-8 h-8 text-red-400" />
           </div>
           <h2 className="text-xl font-bold text-red-400 mb-4">Connection Issue</h2>
-          <p className="text-white mb-6">{error}</p>
+          <p className="text-white mb-6 text-sm">{error}</p>
           
           <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
             <button
@@ -287,23 +306,23 @@ export const Conversation: React.FC = () => {
             <Heart className="w-8 h-8 text-white" />
           </motion.div>
           <h2 className="text-2xl font-bold text-white mb-4">
-            Connecting to Your AI Therapist
+            Setting Up Your AI Therapist
           </h2>
           <p className="text-white/80 mb-4">
             {isJoiningCall 
-              ? 'Joining the always-available therapeutic space...'
-              : 'Creating a safe therapeutic space...'
+              ? 'Connecting to your AI therapist...'
+              : 'Creating your therapeutic session...'
             }
           </p>
           <div className="bg-blue-500/20 backdrop-blur-sm rounded-xl p-4 border border-blue-400/30">
             <div className="flex items-center justify-center gap-2 mb-2">
               <Zap className="w-4 h-4 text-blue-200" />
               <p className="text-blue-200 text-sm font-medium">
-                Always-Available Session
+                Interactive AI Session
               </p>
             </div>
             <p className="text-blue-200 text-xs">
-              ✨ Setting up secure, interactive environment
+              ✨ Setting up video and audio for conversation
             </p>
           </div>
         </motion.div>
@@ -326,9 +345,9 @@ export const Conversation: React.FC = () => {
               <div className="bg-black/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/20">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${connectionQuality === 'good' ? 'bg-green-400' : connectionQuality === 'fair' ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
+                    <div className={`w-2 h-2 rounded-full ${sessionReady ? 'bg-green-400' : therapistJoined ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
                     <span className="text-white text-sm font-medium">
-                      Always-Available Session
+                      {sessionReady ? 'Session Active' : therapistJoined ? 'Therapist Joining' : 'Connecting'}
                     </span>
                     <Zap className="w-3 h-3 text-green-400" />
                   </div>
@@ -354,18 +373,37 @@ export const Conversation: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Microphone Reminder */}
-      {remoteParticipantIds.length > 0 && !isMicEnabled && (
+      {/* Microphone Warning */}
+      {therapistJoined && !isMicEnabled && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="absolute top-20 left-1/2 transform -translate-x-1/2 z-30"
         >
-          <div className="bg-orange-500/90 backdrop-blur-sm rounded-xl px-6 py-3 border border-orange-400/50">
+          <div className="bg-red-500/90 backdrop-blur-sm rounded-xl px-6 py-3 border border-red-400/50">
             <div className="flex items-center gap-3">
-              <MicOffIcon className="w-5 h-5 text-orange-100" />
-              <p className="text-orange-100 font-medium">
-                Enable your microphone so the AI therapist can hear you
+              <MicOffIcon className="w-5 h-5 text-red-100" />
+              <p className="text-red-100 font-medium">
+                Enable microphone - AI therapist cannot hear you!
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Session Ready Notification */}
+      {sessionReady && isMicEnabled && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="absolute top-20 left-1/2 transform -translate-x-1/2 z-30"
+        >
+          <div className="bg-green-500/90 backdrop-blur-sm rounded-xl px-6 py-3 border border-green-400/50">
+            <div className="flex items-center gap-3">
+              <Heart className="w-5 h-5 text-green-100" />
+              <p className="text-green-100 font-medium">
+                Session ready! Your AI therapist can see and hear you.
               </p>
             </div>
           </div>
@@ -408,9 +446,9 @@ export const Conversation: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Main Video Container - Full screen layout */}
+      {/* Main Video Container */}
       <div className="flex-1 flex items-center justify-center p-4">
-        {/* Desktop Layout - Side by side */}
+        {/* Desktop Layout */}
         <div className="hidden lg:block relative w-full max-w-6xl aspect-video bg-white/10 backdrop-blur-sm rounded-3xl border border-white/20 overflow-hidden">
           {remoteParticipantIds?.length > 0 ? (
             <div className="relative size-full">
@@ -428,15 +466,17 @@ export const Conversation: React.FC = () => {
                 >
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-green-200 rounded-full animate-pulse"></div>
-                    <span className="text-green-100 text-sm font-medium">AI Therapist</span>
+                    <span className="text-green-100 text-sm font-medium">AI Therapist Speaking</span>
                   </div>
                 </motion.div>
               )}
-              {/* Always Available Indicator */}
+              {/* Session Status */}
               <div className="absolute top-4 right-4 bg-blue-500/80 backdrop-blur-sm rounded-full px-3 py-1 border border-blue-400">
                 <div className="flex items-center gap-2">
                   <Zap className="w-3 h-3 text-blue-100" />
-                  <span className="text-blue-100 text-sm font-medium">Always Available</span>
+                  <span className="text-blue-100 text-sm font-medium">
+                    {sessionReady ? 'Interactive Session' : 'Connecting'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -452,7 +492,7 @@ export const Conversation: React.FC = () => {
                 </motion.div>
                 <p className="text-white text-lg">Your AI therapist is joining...</p>
                 <p className="text-white/60 text-sm mt-2">
-                  Connecting to always-available support
+                  Setting up interactive video session
                 </p>
               </div>
             </div>
@@ -519,9 +559,9 @@ export const Conversation: React.FC = () => {
           </AnimatePresence>
         </div>
 
-        {/* Mobile/Tablet Layout - Stacked vertically */}
+        {/* Mobile/Tablet Layout */}
         <div className="lg:hidden w-full max-w-md space-y-4">
-          {/* AI Therapist Video - Top */}
+          {/* AI Therapist Video */}
           <div className="relative w-full aspect-[4/3] bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
             {remoteParticipantIds?.length > 0 ? (
               <div className="relative size-full">
@@ -561,13 +601,11 @@ export const Conversation: React.FC = () => {
               </div>
             )}
             <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-1">
-              <p className="text-white text-xs font-medium">
-                Always-Available AI Therapist
-              </p>
+              <p className="text-white text-xs font-medium">AI Therapist</p>
             </div>
           </div>
 
-          {/* User Video - Bottom */}
+          {/* User Video */}
           {localSessionId && (
             <div className="relative w-full aspect-[4/3] bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
               <Video
