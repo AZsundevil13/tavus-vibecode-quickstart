@@ -2,13 +2,17 @@ import React, { useState } from "react";
 import { useAtom } from "jotai";
 import { screenAtom } from "@/store/screens";
 import { apiTokenAtom } from "@/store/tokens";
+import { conversationAtom } from "@/store/conversation";
+import { createPersistentConversation } from "@/api/createPersistentConversation";
 import { motion } from "framer-motion";
-import { Heart, Shield, Clock, Users, Brain, Sparkles } from "lucide-react";
+import { Heart, Shield, Clock, Users, Brain, Sparkles, AlertTriangle } from "lucide-react";
 
 export const Intro: React.FC = () => {
   const [, setScreenState] = useAtom(screenAtom);
   const [token, setToken] = useAtom(apiTokenAtom);
+  const [, setConversation] = useAtom(conversationAtom);
   const [isStarting, setIsStarting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Set the default API key only if no token exists
   React.useEffect(() => {
@@ -21,12 +25,30 @@ export const Intro: React.FC = () => {
 
   const handleStartChat = async () => {
     setIsStarting(true);
-    console.log("Starting therapy session with token:", token);
+    setError(null);
     
-    // Add a brief delay for better UX
-    setTimeout(() => {
-      setScreenState({ currentScreen: "conversation" });
-    }, 1500);
+    try {
+      console.log("Creating new therapy session with token:", token);
+      
+      // Create a new persistent conversation
+      const conversationData = await createPersistentConversation(token);
+      
+      console.log("Successfully created conversation:", conversationData);
+      
+      // Store the conversation data
+      setConversation(conversationData);
+      
+      // Navigate to conversation screen
+      setTimeout(() => {
+        setScreenState({ currentScreen: "conversation" });
+      }, 1000);
+      
+    } catch (error) {
+      console.error("Failed to create therapy session:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create session';
+      setError(errorMessage);
+      setIsStarting(false);
+    }
   };
 
   const features = [
@@ -73,6 +95,42 @@ export const Intro: React.FC = () => {
     "Grief & Loss Processing"
   ];
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 border border-white/20 text-center max-w-md w-full"
+        >
+          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-500/20 flex items-center justify-center">
+            <AlertTriangle className="w-8 h-8 text-red-400" />
+          </div>
+          <h2 className="text-xl font-bold text-red-400 mb-4">Session Creation Failed</h2>
+          <p className="text-white mb-6 text-sm">{error}</p>
+          
+          <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
+            <button
+              onClick={() => {
+                setError(null);
+                handleStartChat();
+              }}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => setError(null)}
+              className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+            >
+              Go Back
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   if (isStarting) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black">
@@ -89,10 +147,10 @@ export const Intro: React.FC = () => {
             <Heart className="w-8 h-8 text-white" />
           </motion.div>
           <h2 className="text-2xl font-bold text-white mb-4">
-            Connecting to Your AI Therapist
+            Creating Your AI Therapy Session
           </h2>
           <p className="text-white/80">
-            Creating your personal therapeutic space...
+            Setting up your personal therapeutic space...
           </p>
         </motion.div>
       </div>
@@ -150,7 +208,8 @@ export const Intro: React.FC = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleStartChat}
-              className="px-12 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white text-xl font-semibold rounded-2xl transition-all duration-300 shadow-2xl hover:shadow-purple-500/25"
+              disabled={isStarting}
+              className="px-12 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white text-xl font-semibold rounded-2xl transition-all duration-300 shadow-2xl hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Start Your Session
             </motion.button>
