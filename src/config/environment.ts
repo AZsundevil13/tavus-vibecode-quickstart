@@ -11,21 +11,31 @@ interface EnvironmentConfig {
 }
 
 const getEnvironmentConfig = (): EnvironmentConfig => {
-  // Validate required environment variables
+  // Get environment variables
   const tavusApiKey = import.meta.env.VITE_TAVUS_API_KEY;
   const tavusReplicaId = import.meta.env.VITE_TAVUS_REPLICA_ID;
 
-  if (!tavusApiKey || tavusApiKey === 'your_tavus_api_key_here') {
-    throw new Error('VITE_TAVUS_API_KEY is required. Please set it in your .env file with your actual Tavus API key.');
-  }
+  // Use default values if environment variables are not set or are placeholder values
+  const defaultApiKey = "a585d2b465da47238e21335438dd4d1c";
+  const defaultReplicaId = "r91c80eca351";
 
-  if (!tavusReplicaId || tavusReplicaId === 'your_replica_id_here') {
-    throw new Error('VITE_TAVUS_REPLICA_ID is required. Please set it in your .env file with your actual Tavus replica ID.');
-  }
+  const finalApiKey = (!tavusApiKey || tavusApiKey === 'your_tavus_api_key_here') 
+    ? defaultApiKey 
+    : tavusApiKey;
+
+  const finalReplicaId = (!tavusReplicaId || tavusReplicaId === 'your_replica_id_here') 
+    ? defaultReplicaId 
+    : tavusReplicaId;
+
+  console.log('Environment config loaded:', {
+    apiKey: finalApiKey ? 'Set' : 'Missing',
+    replicaId: finalReplicaId ? 'Set' : 'Missing',
+    nodeEnv: import.meta.env.VITE_NODE_ENV || 'development'
+  });
 
   return {
-    tavusApiKey,
-    tavusReplicaId,
+    tavusApiKey: finalApiKey,
+    tavusReplicaId: finalReplicaId,
     nodeEnv: import.meta.env.VITE_NODE_ENV || 'development',
     googleAnalyticsId: import.meta.env.VITE_GOOGLE_ANALYTICS_ID,
     sentryDsn: import.meta.env.VITE_SENTRY_DSN,

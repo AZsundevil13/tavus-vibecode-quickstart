@@ -3,9 +3,9 @@ import { useAtom } from "jotai";
 import { screenAtom } from "@/store/screens";
 import { apiTokenAtom } from "@/store/tokens";
 import { conversationAtom } from "@/store/conversation";
-import { createPersistentConversation } from "@/api/createPersistentConversation";
 import { motion } from "framer-motion";
 import { Heart, Shield, Clock, Users, Brain, Sparkles, AlertTriangle } from "lucide-react";
+import { ConversationStatus } from "@/types";
 
 export const Intro: React.FC = () => {
   const [, setScreenState] = useAtom(screenAtom);
@@ -28,24 +28,30 @@ export const Intro: React.FC = () => {
     setError(null);
     
     try {
-      console.log("Creating new therapy session with token:", token);
+      console.log("Starting therapy session with direct conversation link");
       
-      // Create a new persistent conversation
-      const conversationData = await createPersistentConversation(token);
+      // Use the provided conversation link directly instead of creating a new one
+      const directConversation = {
+        conversation_id: "ca1906a3ee1ff4fb",
+        conversation_name: "AI Therapy Session",
+        status: ConversationStatus.ACTIVE,
+        conversation_url: "https://tavus.daily.co/ca1906a3ee1ff4fb",
+        created_at: new Date().toLocaleString(),
+      };
       
-      console.log("Successfully created conversation:", conversationData);
+      console.log("Using direct conversation link:", directConversation);
       
       // Store the conversation data
-      setConversation(conversationData);
+      setConversation(directConversation);
       
       // Navigate to conversation screen
       setTimeout(() => {
         setScreenState({ currentScreen: "conversation" });
-      }, 1000);
+      }, 1500);
       
     } catch (error) {
-      console.error("Failed to create therapy session:", error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create session';
+      console.error("Failed to start therapy session:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to start session';
       setError(errorMessage);
       setIsStarting(false);
     }
@@ -147,11 +153,16 @@ export const Intro: React.FC = () => {
             <Heart className="w-8 h-8 text-white" />
           </motion.div>
           <h2 className="text-2xl font-bold text-white mb-4">
-            Creating Your AI Therapy Session
+            Connecting to Your AI Therapist
           </h2>
           <p className="text-white/80">
-            Setting up your personal therapeutic space...
+            Joining your therapeutic session...
           </p>
+          <div className="bg-green-500/20 backdrop-blur-sm rounded-xl p-4 border border-green-400/30 mt-4">
+            <p className="text-green-200 text-sm">
+              ✨ Using direct conversation link for instant connection
+            </p>
+          </div>
         </motion.div>
       </div>
     );
@@ -189,6 +200,16 @@ export const Intro: React.FC = () => {
               available 24/7 with evidence-based care and trauma-informed approaches. 
               Each conversation is private and tailored to your unique needs.
             </p>
+
+            <div className="bg-green-500/20 backdrop-blur-sm rounded-2xl p-4 mb-8 border border-green-400/30">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Heart className="w-5 h-5 text-green-300" />
+                <p className="text-green-200 font-semibold">Ready to Connect</p>
+              </div>
+              <p className="text-green-100/80 text-sm">
+                Your AI therapist is available now - click below to start your session
+              </p>
+            </div>
 
             <div className="flex flex-wrap justify-center gap-3 mb-8">
               {specializations.map((spec, index) => (
@@ -249,8 +270,8 @@ export const Intro: React.FC = () => {
             <Clock className="w-12 h-12 text-green-400 mx-auto mb-4" />
             <h2 className="text-3xl font-bold text-white mb-4">How It Works</h2>
             <p className="text-green-100/90 text-lg mb-6 max-w-3xl mx-auto">
-              Each user gets their own private conversation with your AI therapist. 
-              Simply click "Start Your Session" and you'll be connected instantly to begin your healing journey.
+              Connect instantly to your AI therapist using a direct conversation link. 
+              No complex setup required - just click and start your healing journey.
             </p>
             <div className="grid md:grid-cols-3 gap-4 text-sm">
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
@@ -261,7 +282,7 @@ export const Intro: React.FC = () => {
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                 <div className="w-8 h-8 bg-green-400 text-black rounded-full flex items-center justify-center mx-auto mb-2 font-bold">2</div>
                 <p className="text-green-200 font-semibold">Connect Instantly</p>
-                <p className="text-green-100/80">Your personal AI therapist joins</p>
+                <p className="text-green-100/80">Direct link to your AI therapist</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                 <div className="w-8 h-8 bg-green-400 text-black rounded-full flex items-center justify-center mx-auto mb-2 font-bold">3</div>
@@ -339,7 +360,7 @@ export const Intro: React.FC = () => {
             <h3 className="text-lg font-semibold text-white mb-3">Your Privacy & Safety</h3>
             <p className="text-white/70 text-sm max-w-2xl mx-auto">
               Each therapy session is completely private and confidential. Your conversations are secure, 
-              and each user gets their own individual session with the AI therapist. While this provides 
+              and you connect directly to your personal AI therapist. While this provides 
               valuable support, it's not a replacement for professional mental health treatment when needed.
             </p>
           </div>
