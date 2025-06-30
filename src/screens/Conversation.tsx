@@ -42,6 +42,7 @@ export const Conversation: React.FC = () => {
   const [hasEnabledMic, setHasEnabledMic] = useState(false);
   const [therapistJoined, setTherapistJoined] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const daily = useDaily();
   const localSessionId = useLocalSessionId();
@@ -91,19 +92,30 @@ export const Conversation: React.FC = () => {
 
     const joinCall = async () => {
       setIsJoiningCall(true);
+      setError(null);
       
       try {
         console.log("Joining AI therapy session with URL:", conversationUrl);
         
+        // Destroy any existing call first
+        if (daily.meetingState() !== 'left-meeting') {
+          await daily.leave();
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
         // Join the call with optimal settings for AI interaction
-        await daily.join({
+        const joinResult = await daily.join({
           url: conversationUrl,
           startVideoOff: false,
           startAudioOff: false,
           userName: "Therapy Client",
         });
         
+        console.log("Join result:", joinResult);
         console.log("Successfully joined AI therapy session");
+        
+        // Wait a moment for connection to stabilize
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Enable video and audio immediately
         await daily.setLocalVideo(true);
@@ -112,13 +124,30 @@ export const Conversation: React.FC = () => {
         setHasEnabledMic(true);
         setIsLoading(false);
         setError(null);
+        setRetryCount(0);
         
         console.log("Audio and video enabled - ready for AI therapist interaction");
         
       } catch (error) {
         console.error("Failed to join AI therapy session:", error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        setError(`Failed to connect to session: ${errorMessage}`);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown connection error';
+        
+        // Retry logic for connection failures
+        if (retryCount < 3) {
+          console.log(`Retrying connection (attempt ${retryCount + 1}/3)...`);
+          setRetryCount(prev => prev + 1);
+          setIsJoiningCall(false);
+          
+          // Wait before retry
+          setTimeout(() => {
+            if (conversationUrl && daily) {
+              joinCall();
+            }
+          }, 2000);
+          return;
+        }
+        
+        setError(`Connection failed after 3 attempts: ${errorMessage}`);
         setIsLoading(false);
       } finally {
         setIsJoiningCall(false);
@@ -128,7 +157,7 @@ export const Conversation: React.FC = () => {
     // Join immediately when conversation data is available
     joinCall();
     
-  }, [daily, isJoiningCall, conversationUrl, conversation]);
+  }, [daily, isJoiningCall, conversationUrl, conversation, retryCount]);
 
   // Monitor when AI therapist joins and becomes active
   useEffect(() => {
@@ -242,6 +271,7 @@ export const Conversation: React.FC = () => {
     setHasEnabledMic(false);
     setTherapistJoined(false);
     setSessionReady(false);
+    setRetryCount(0);
   }, []);
 
   const formatTime = (seconds: number) => {
@@ -267,7 +297,7 @@ export const Conversation: React.FC = () => {
         setError("Connection is taking longer than expected. Please try again.");
         setIsLoading(false);
       }
-    }, 30000); // 30 second timeout
+    }, 45000); // 45 second timeout
 
     return () => clearTimeout(timeout);
   }, [isLoading, error]);
@@ -351,7 +381,7 @@ export const Conversation: React.FC = () => {
           </h2>
           <p className="text-white/80 mb-4">
             {isJoiningCall 
-              ? 'Joining your therapy session...'
+              ? `Joining your therapy session... ${retryCount > 0 ? `(Retry ${retryCount}/3)` : ''}`
               : !therapistJoined
               ? 'Your AI therapist is joining the session...'
               : 'Preparing your therapeutic session...'
