@@ -21,6 +21,7 @@ import {
   PhoneIcon,
 } from "lucide-react";
 import { apiTokenAtom } from "@/store/tokens";
+import { ConversationStatus } from "@/types";
 import { quantum } from 'ldrs';
 
 quantum.register();
@@ -51,7 +52,7 @@ export const Conversation: React.FC = () => {
       const staticConversation = {
         conversation_id: conversationId,
         conversation_name: "Hi Friend",
-        status: "active" as const,
+        status: ConversationStatus.ACTIVE,
         conversation_url: conversationUrl,
         created_at: "June 30, 5:11 am",
       };
