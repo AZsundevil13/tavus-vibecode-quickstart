@@ -2,95 +2,31 @@ import React, { useState } from "react";
 import { useAtom } from "jotai";
 import { screenAtom } from "@/store/screens";
 import { apiTokenAtom } from "@/store/tokens";
-import { conversationAtom } from "@/store/conversation";
-import { createConversation } from "@/api/createConversation";
 import { motion } from "framer-motion";
 import { Heart, Shield, Clock, Users, Brain, Sparkles } from "lucide-react";
-import { logger } from "@/utils/logger";
-import { analytics } from "@/utils/analytics";
-import { performanceMonitor } from "@/utils/performance";
-import { conversationRateLimiter } from "@/utils/security";
 
 export const Intro: React.FC = () => {
   const [, setScreenState] = useAtom(screenAtom);
-  const [token] = useAtom(apiTokenAtom);
-  const [, setConversation] = useAtom(conversationAtom);
+  const [token, setToken] = useAtom(apiTokenAtom);
   const [isStarting, setIsStarting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
+  // Set the default API key only if no token exists
   React.useEffect(() => {
-    // Track page view
-    analytics.trackPageView('/intro');
-    
-    // Log memory usage in development
-    performanceMonitor.logMemoryUsage();
-  }, []);
+    if (!token) {
+      const defaultToken = "a585d2b465da47238e21335438dd4d1c";
+      setToken(defaultToken);
+      localStorage.setItem('tavus-token', defaultToken);
+    }
+  }, [token, setToken]);
 
   const handleStartChat = async () => {
-    if (!token) {
-      const errorMsg = "API token is required to start a session";
-      setError(errorMsg);
-      logger.error('Missing API token on session start');
-      analytics.trackError('missing_token_session_start', 'intro');
-      return;
-    }
-
-    // Check rate limiting
-    if (!conversationRateLimiter.canMakeCall()) {
-      const errorMsg = "Too many session attempts. Please wait a few minutes before trying again.";
-      setError(errorMsg);
-      logger.warn('Conversation rate limit exceeded');
-      analytics.trackError('conversation_rate_limit', 'intro');
-      return;
-    }
-
     setIsStarting(true);
-    setError(null);
+    console.log("Starting comprehensive therapy session with token:", token);
     
-    try {
-      logger.info('Starting therapy session creation');
-      analytics.trackEvent({
-        action: 'session_start_attempt',
-        category: 'therapy',
-        label: 'ai_therapy_session',
-      });
-
-      const conversation = await performanceMonitor.measureAsync('create_conversation_flow', async () => {
-        return createConversation(token);
-      });
-      
-      logger.info('Conversation created successfully', { 
-        conversationId: conversation.conversation_id 
-      });
-      
-      // Store the conversation in the atom
-      setConversation(conversation);
-      
-      analytics.trackSessionStart();
-      
-      // Navigate to conversation screen
+    // Add a brief delay for better UX
+    setTimeout(() => {
       setScreenState({ currentScreen: "conversation" });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      logger.error('Failed to create conversation', error);
-      
-      analytics.trackError('conversation_creation_failed', 'intro');
-      
-      // Provide user-friendly error messages
-      let userErrorMessage = errorMessage;
-      if (errorMessage.includes('rate limit')) {
-        userErrorMessage = 'Too many requests. Please wait a moment and try again.';
-      } else if (errorMessage.includes('token')) {
-        userErrorMessage = 'Authentication error. Please check your API configuration.';
-      } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
-        userErrorMessage = 'Network error. Please check your connection and try again.';
-      } else {
-        userErrorMessage = 'Unable to start session. Please try again in a moment.';
-      }
-      
-      setError(userErrorMessage);
-      setIsStarting(false);
-    }
+    }, 1500);
   };
 
   const features = [
@@ -156,20 +92,6 @@ export const Intro: React.FC = () => {
           <p className="text-white/80">
             Creating a safe, therapeutic space just for you...
           </p>
-          {error && (
-            <div className="mt-4 p-3 bg-red-500/20 border border-red-400/30 rounded-lg">
-              <p className="text-red-200 text-sm">{error}</p>
-              <button
-                onClick={() => {
-                  setIsStarting(false);
-                  setError(null);
-                }}
-                className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
-              >
-                Try Again
-              </button>
-            </div>
-          )}
         </motion.div>
       </div>
     );
@@ -225,31 +147,10 @@ export const Intro: React.FC = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleStartChat}
-              disabled={isStarting || !token}
-              className="px-12 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white text-xl font-semibold rounded-2xl transition-all duration-300 shadow-2xl hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-12 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white text-xl font-semibold rounded-2xl transition-all duration-300 shadow-2xl hover:shadow-purple-500/25"
             >
               Begin Your Healing Journey
             </motion.button>
-
-            {error && (
-              <div className="mt-6 p-4 bg-red-500/20 border border-red-400/30 rounded-lg max-w-md mx-auto">
-                <p className="text-red-200 text-sm">{error}</p>
-                <button
-                  onClick={() => setError(null)}
-                  className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
-                >
-                  Dismiss
-                </button>
-              </div>
-            )}
-
-            {!token && (
-              <div className="mt-6 p-4 bg-yellow-500/20 border border-yellow-400/30 rounded-lg max-w-md mx-auto">
-                <p className="text-yellow-200 text-sm">
-                  API configuration required. Please check your environment settings.
-                </p>
-              </div>
-            )}
           </div>
         </motion.div>
 

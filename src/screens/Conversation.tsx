@@ -20,23 +20,12 @@ import {
   VideoOffIcon,
   PhoneIcon,
   Heart,
-  Shield,
-  MessageCircle,
   Volume2,
-  VolumeX,
-  Settings,
   HelpCircle
 } from "lucide-react";
 import { apiTokenAtom } from "@/store/tokens";
 import { ConversationStatus } from "@/types";
-import { quantum } from 'ldrs';
 import { motion, AnimatePresence } from "framer-motion";
-import { logger } from "@/utils/logger";
-import { analytics } from "@/utils/analytics";
-import { performanceMonitor } from "@/utils/performance";
-import { SecurityUtils } from "@/utils/security";
-
-quantum.register();
 
 export const Conversation: React.FC = () => {
   const [conversation, setConversation] = useAtom(conversationAtom);
@@ -59,6 +48,10 @@ export const Conversation: React.FC = () => {
   const isCameraEnabled = !localVideo.isOff;
   const isMicEnabled = !localAudio.isOff;
   const remoteParticipantIds = useParticipantIds({ filter: "remote" });
+
+  // Use the specific conversation URL directly if no conversation exists
+  const conversationUrl = "https://tavus.daily.co/ce5f6050ae52d4b4";
+  const conversationId = "ce5f6050ae52d4b4";
 
   // Session timer
   useEffect(() => {
@@ -88,72 +81,49 @@ export const Conversation: React.FC = () => {
     };
   }, [showControls]);
 
-  // Redirect to intro if no conversation exists
+  // Set up the conversation object with the provided details if none exists
   useEffect(() => {
     if (!conversation) {
-      logger.warn('No conversation found, redirecting to intro');
-      setScreenState({ currentScreen: "intro" });
-      return;
+      const staticConversation = {
+        conversation_id: conversationId,
+        conversation_name: "Therapeutic Session",
+        status: ConversationStatus.ACTIVE,
+        conversation_url: conversationUrl,
+        created_at: new Date().toLocaleString(),
+      };
+      setConversation(staticConversation);
     }
-  }, [conversation, setScreenState]);
-
-  // Track page view and session start
-  useEffect(() => {
-    if (conversation) {
-      analytics.trackPageView('/conversation');
-      logger.info('Conversation screen loaded', { 
-        conversationId: conversation.conversation_id 
-      });
-    }
-  }, [conversation]);
+  }, [conversation, setConversation]);
 
   useEffect(() => {
-    if (!conversation?.conversation_url || !daily || isJoiningCall) return;
-
-    // Validate conversation URL before joining
-    if (!SecurityUtils.validateConversationUrl(conversation.conversation_url)) {
-      const error = 'Invalid conversation URL';
-      logger.error('Invalid conversation URL detected', { 
-        url: conversation.conversation_url 
-      });
-      setError(error);
-      analytics.trackError('invalid_conversation_url', 'conversation');
-      return;
-    }
+    const urlToUse = conversation?.conversation_url || conversationUrl;
+    
+    if (!urlToUse || !daily || isJoiningCall) return;
 
     const joinCall = async () => {
       setIsJoiningCall(true);
       
       try {
-        logger.info('Joining therapy session', { 
-          conversationId: conversation.conversation_id,
-          url: conversation.conversation_url 
+        console.log('Joining therapy session', { 
+          conversationId: conversation?.conversation_id || conversationId,
+          url: urlToUse 
         });
         
-        await performanceMonitor.measureAsync('daily_join_call', async () => {
-          return daily.join({
-            url: conversation.conversation_url,
-            startVideoOff: false,
-            startAudioOff: true,
-          });
+        await daily.join({
+          url: urlToUse,
+          startVideoOff: false,
+          startAudioOff: true,
         });
         
-        logger.info('Successfully joined therapy session');
+        console.log('Successfully joined therapy session');
         daily.setLocalVideo(true);
         daily.setLocalAudio(false);
         setIsLoading(false);
         setError(null);
         
-        analytics.trackEvent({
-          action: 'video_call_joined',
-          category: 'therapy',
-          label: 'ai_therapy_session',
-        });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        logger.error('Failed to join therapy session', { error, conversationId: conversation.conversation_id });
-        
-        analytics.trackError('video_call_join_failed', 'conversation');
+        console.error('Failed to join therapy session', { error, conversationId: conversation?.conversation_id || conversationId });
         
         // Provide user-friendly error messages
         let userErrorMessage = errorMessage;
@@ -179,32 +149,10 @@ export const Conversation: React.FC = () => {
     if (remoteParticipantIds.length && !localAudio.isOff) return;
     
     if (remoteParticipantIds.length) {
-      logger.info('AI therapist joined, enabling audio');
+      console.log('AI therapist joined, enabling audio');
       setTimeout(() => daily?.setLocalAudio(true), 2000);
     }
   }, [remoteParticipantIds, daily, localAudio.isOff]);
-
-  // Monitor connection quality
-  useEffect(() => {
-    if (!daily) return;
-
-    const handleNetworkQualityChange = (event: any) => {
-      const quality = event.quality;
-      if (quality > 3) {
-        setConnectionQuality('good');
-      } else if (quality > 1) {
-        setConnectionQuality('fair');
-      } else {
-        setConnectionQuality('poor');
-      }
-    };
-
-    daily.on('network-quality-change', handleNetworkQualityChange);
-
-    return () => {
-      daily.off('network-quality-change', handleNetworkQualityChange);
-    };
-  }, [daily]);
 
   // Monitor audio levels for speaking indicator
   useEffect(() => {
@@ -220,62 +168,38 @@ export const Conversation: React.FC = () => {
 
   const toggleVideo = useCallback(() => {
     daily?.setLocalVideo(!isCameraEnabled);
-    analytics.trackEvent({
-      action: isCameraEnabled ? 'video_disabled' : 'video_enabled',
-      category: 'therapy',
-      label: 'video_controls',
-    });
   }, [daily, isCameraEnabled]);
 
   const toggleAudio = useCallback(() => {
     daily?.setLocalAudio(!isMicEnabled);
-    analytics.trackEvent({
-      action: isMicEnabled ? 'audio_disabled' : 'audio_enabled',
-      category: 'therapy',
-      label: 'audio_controls',
-    });
   }, [daily, isMicEnabled]);
 
   const leaveConversation = useCallback(() => {
     const sessionDuration = Math.floor((Date.now() - sessionStartTime) / 1000);
     
-    logger.info('Leaving conversation', { 
-      conversationId: conversation?.conversation_id,
+    console.log('Leaving conversation', { 
+      conversationId: conversation?.conversation_id || conversationId,
       sessionDuration 
     });
     
     daily?.leave();
     daily?.destroy();
     
-    if (token && conversation?.conversation_id) {
-      endConversation(token, conversation.conversation_id).catch(error => {
-        logger.error('Failed to end conversation via API', error);
+    if (token && (conversation?.conversation_id || conversationId)) {
+      endConversation(token, conversation?.conversation_id || conversationId).catch(error => {
+        console.error('Failed to end conversation via API', error);
       });
     }
-    
-    analytics.trackSessionEnd(sessionDuration);
-    analytics.trackEvent({
-      action: 'session_ended',
-      category: 'therapy',
-      label: 'user_initiated',
-      value: sessionDuration,
-    });
     
     setConversation(null);
     setScreenState({ currentScreen: "finalScreen" });
   }, [daily, token, conversation?.conversation_id, setConversation, setScreenState, sessionStartTime]);
 
   const retryConnection = useCallback(() => {
-    logger.info('Retrying connection');
+    console.log('Retrying connection');
     setIsLoading(true);
     setError(null);
     setIsJoiningCall(false);
-    
-    analytics.trackEvent({
-      action: 'connection_retry',
-      category: 'therapy',
-      label: 'user_initiated',
-    });
   }, []);
 
   const formatTime = (seconds: number) => {
@@ -291,11 +215,6 @@ export const Conversation: React.FC = () => {
     "If you feel overwhelmed, let your therapist know - they can guide you through grounding exercises",
     "This is your safe space - there's no judgment here, only support and understanding"
   ];
-
-  // Don't render if no conversation
-  if (!conversation) {
-    return null;
-  }
 
   if (error) {
     return (
@@ -360,7 +279,7 @@ export const Conversation: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black p-4 relative">
+    <div className="min-h-screen bg-black flex flex-col">
       {/* Session Info Bar */}
       <AnimatePresence>
         {showControls && (
@@ -430,121 +349,27 @@ export const Conversation: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Desktop Layout - Side by side */}
-      <div className="hidden lg:block relative w-full max-w-6xl aspect-video bg-white/10 backdrop-blur-sm rounded-3xl border border-white/20 overflow-hidden">
-        {remoteParticipantIds?.length > 0 ? (
-          <div className="relative size-full">
-            <Video
-              id={remoteParticipantIds[0]}
-              className="size-full"
-              tileClassName="!object-cover rounded-3xl"
-            />
-            {/* Therapist Speaking Indicator */}
-            {isTherapistSpeaking && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute top-4 left-4 bg-green-500/80 backdrop-blur-sm rounded-full px-3 py-1 border border-green-400"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-200 rounded-full animate-pulse"></div>
-                  <span className="text-green-100 text-sm font-medium">AI Therapist</span>
-                </div>
-              </motion.div>
-            )}
-          </div>
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center"
-              >
-                <Heart className="w-8 h-8 text-white" />
-              </motion.div>
-              <p className="text-white text-lg">Your AI therapist is joining...</p>
-              <p className="text-white/60 text-sm mt-2">Creating a safe space for healing</p>
-            </div>
-          </div>
-        )}
-        
-        {localSessionId && (
-          <div className="absolute bottom-4 right-4">
-            <Video
-              id={localSessionId}
-              tileClassName="!object-cover"
-              className="aspect-video h-32 w-48 overflow-hidden rounded-lg border-2 border-blue-500"
-            />
-            <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1">
-              <span className="text-white text-xs font-medium">You</span>
-            </div>
-          </div>
-        )}
-        
-        {/* Desktop Controls */}
-        <AnimatePresence>
-          {showControls && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-4"
-            >
-              <Button
-                size="icon"
-                className={`bg-black/60 border border-white/20 hover:bg-black/80 ${!isMicEnabled ? 'bg-red-600/80 hover:bg-red-700/80' : ''}`}
-                onClick={toggleAudio}
-              >
-                {!isMicEnabled ? (
-                  <MicOffIcon className="size-6" />
-                ) : (
-                  <MicIcon className="size-6" />
-                )}
-              </Button>
-              <Button
-                size="icon"
-                className={`bg-black/60 border border-white/20 hover:bg-black/80 ${!isCameraEnabled ? 'bg-gray-600/80 hover:bg-gray-700/80' : ''}`}
-                onClick={toggleVideo}
-              >
-                {!isCameraEnabled ? (
-                  <VideoOffIcon className="size-6" />
-                ) : (
-                  <VideoIcon className="size-6" />
-                )}
-              </Button>
-              <Button
-                size="icon"
-                className="bg-red-600/80 hover:bg-red-700/80 border border-red-400/30"
-                onClick={leaveConversation}
-              >
-                <PhoneIcon className="size-6 rotate-[135deg]" />
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Mobile/Tablet Layout - Stacked vertically */}
-      <div className="lg:hidden w-full max-w-md flex flex-col gap-4">
-        {/* AI Therapist Video - Top */}
-        <div className="relative w-full aspect-[4/3] bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
+      {/* Main Video Container - Full screen layout */}
+      <div className="flex-1 flex items-center justify-center p-4">
+        {/* Desktop Layout - Side by side */}
+        <div className="hidden lg:block relative w-full max-w-6xl aspect-video bg-white/10 backdrop-blur-sm rounded-3xl border border-white/20 overflow-hidden">
           {remoteParticipantIds?.length > 0 ? (
             <div className="relative size-full">
               <Video
                 id={remoteParticipantIds[0]}
                 className="size-full"
-                tileClassName="!object-cover rounded-2xl"
+                tileClassName="!object-cover rounded-3xl"
               />
+              {/* Therapist Speaking Indicator */}
               {isTherapistSpeaking && (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute top-3 left-3 bg-green-500/80 backdrop-blur-sm rounded-full px-3 py-1 border border-green-400"
+                  className="absolute top-4 left-4 bg-green-500/80 backdrop-blur-sm rounded-full px-3 py-1 border border-green-400"
                 >
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-green-200 rounded-full animate-pulse"></div>
-                    <span className="text-green-100 text-xs font-medium">Speaking</span>
+                    <span className="text-green-100 text-sm font-medium">AI Therapist</span>
                   </div>
                 </motion.div>
               )}
@@ -555,69 +380,166 @@ export const Conversation: React.FC = () => {
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center"
+                  className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center"
                 >
-                  <Heart className="w-6 h-6 text-white" />
+                  <Heart className="w-8 h-8 text-white" />
                 </motion.div>
-                <p className="text-white text-sm">AI Therapist joining...</p>
+                <p className="text-white text-lg">Your AI therapist is joining...</p>
+                <p className="text-white/60 text-sm mt-2">Creating a safe space for healing</p>
               </div>
             </div>
           )}
-          <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-1">
-            <p className="text-white text-xs font-medium">AI Therapist</p>
-          </div>
+          
+          {localSessionId && (
+            <div className="absolute bottom-4 right-4">
+              <Video
+                id={localSessionId}
+                tileClassName="!object-cover"
+                className="aspect-video h-32 w-48 overflow-hidden rounded-lg border-2 border-blue-500"
+              />
+              <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1">
+                <span className="text-white text-xs font-medium">You</span>
+              </div>
+            </div>
+          )}
+          
+          {/* Desktop Controls */}
+          <AnimatePresence>
+            {showControls && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-4"
+              >
+                <Button
+                  size="icon"
+                  className={`bg-black/60 border border-white/20 hover:bg-black/80 ${!isMicEnabled ? 'bg-red-600/80 hover:bg-red-700/80' : ''}`}
+                  onClick={toggleAudio}
+                >
+                  {!isMicEnabled ? (
+                    <MicOffIcon className="size-6" />
+                  ) : (
+                    <MicIcon className="size-6" />
+                  )}
+                </Button>
+                <Button
+                  size="icon"
+                  className={`bg-black/60 border border-white/20 hover:bg-black/80 ${!isCameraEnabled ? 'bg-gray-600/80 hover:bg-gray-700/80' : ''}`}
+                  onClick={toggleVideo}
+                >
+                  {!isCameraEnabled ? (
+                    <VideoOffIcon className="size-6" />
+                  ) : (
+                    <VideoIcon className="size-6" />
+                  )}
+                </Button>
+                <Button
+                  size="icon"
+                  className="bg-red-600/80 hover:bg-red-700/80 border border-red-400/30"
+                  onClick={leaveConversation}
+                >
+                  <PhoneIcon className="size-6 rotate-[135deg]" />
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* User Video - Bottom */}
-        {localSessionId && (
+        {/* Mobile/Tablet Layout - Stacked vertically */}
+        <div className="lg:hidden w-full max-w-md space-y-4">
+          {/* AI Therapist Video - Top */}
           <div className="relative w-full aspect-[4/3] bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
-            <Video
-              id={localSessionId}
-              tileClassName="!object-cover rounded-2xl"
-              className="size-full"
-            />
-            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-1">
-              <p className="text-white text-xs font-medium">You</p>
-            </div>
-            {isMicEnabled && (
-              <div className="absolute top-3 right-3 bg-green-500/80 backdrop-blur-sm rounded-lg px-2 py-1">
-                <Volume2 className="w-4 h-4 text-green-100" />
+            {remoteParticipantIds?.length > 0 ? (
+              <div className="relative size-full">
+                <Video
+                  id={remoteParticipantIds[0]}
+                  className="size-full"
+                  tileClassName="!object-cover rounded-2xl"
+                />
+                {isTherapistSpeaking && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute top-3 left-3 bg-green-500/80 backdrop-blur-sm rounded-full px-3 py-1 border border-green-400"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-200 rounded-full animate-pulse"></div>
+                      <span className="text-green-100 text-xs font-medium">Speaking</span>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center">
+                <div className="text-center">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center"
+                  >
+                    <Heart className="w-6 h-6 text-white" />
+                  </motion.div>
+                  <p className="text-white text-sm">AI Therapist joining...</p>
+                </div>
               </div>
             )}
+            <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-1">
+              <p className="text-white text-xs font-medium">AI Therapist</p>
+            </div>
           </div>
-        )}
 
-        {/* Mobile Controls */}
-        <div className="flex justify-center gap-4 mt-2">
-          <Button
-            size="icon"
-            className={`bg-black/60 border border-white/20 hover:bg-black/80 h-12 w-12 ${!isMicEnabled ? 'bg-red-600/80 hover:bg-red-700/80' : ''}`}
-            onClick={toggleAudio}
-          >
-            {!isMicEnabled ? (
-              <MicOffIcon className="size-5" />
-            ) : (
-              <MicIcon className="size-5" />
-            )}
-          </Button>
-          <Button
-            size="icon"
-            className={`bg-black/60 border border-white/20 hover:bg-black/80 h-12 w-12 ${!isCameraEnabled ? 'bg-gray-600/80 hover:bg-gray-700/80' : ''}`}
-            onClick={toggleVideo}
-          >
-            {!isCameraEnabled ? (
-              <VideoOffIcon className="size-5" />
-            ) : (
-              <VideoIcon className="size-5" />
-            )}
-          </Button>
-          <Button
-            size="icon"
-            className="bg-red-600/80 hover:bg-red-700/80 h-12 w-12 border border-red-400/30"
-            onClick={leaveConversation}
-          >
-            <PhoneIcon className="size-5 rotate-[135deg]" />
-          </Button>
+          {/* User Video - Bottom */}
+          {localSessionId && (
+            <div className="relative w-full aspect-[4/3] bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
+              <Video
+                id={localSessionId}
+                tileClassName="!object-cover rounded-2xl"
+                className="size-full"
+              />
+              <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-1">
+                <p className="text-white text-xs font-medium">You</p>
+              </div>
+              {isMicEnabled && (
+                <div className="absolute top-3 right-3 bg-green-500/80 backdrop-blur-sm rounded-lg px-2 py-1">
+                  <Volume2 className="w-4 h-4 text-green-100" />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Mobile Controls */}
+          <div className="flex justify-center gap-4 mt-4">
+            <Button
+              size="icon"
+              className={`bg-black/60 border border-white/20 hover:bg-black/80 h-12 w-12 ${!isMicEnabled ? 'bg-red-600/80 hover:bg-red-700/80' : ''}`}
+              onClick={toggleAudio}
+            >
+              {!isMicEnabled ? (
+                <MicOffIcon className="size-5" />
+              ) : (
+                <MicIcon className="size-5" />
+              )}
+            </Button>
+            <Button
+              size="icon"
+              className={`bg-black/60 border border-white/20 hover:bg-black/80 h-12 w-12 ${!isCameraEnabled ? 'bg-gray-600/80 hover:bg-gray-700/80' : ''}`}
+              onClick={toggleVideo}
+            >
+              {!isCameraEnabled ? (
+                <VideoOffIcon className="size-5" />
+              ) : (
+                <VideoIcon className="size-5" />
+              )}
+            </Button>
+            <Button
+              size="icon"
+              className="bg-red-600/80 hover:bg-red-700/80 h-12 w-12 border border-red-400/30"
+              onClick={leaveConversation}
+            >
+              <PhoneIcon className="size-5 rotate-[135deg]" />
+            </Button>
+          </div>
         </div>
       </div>
       
